@@ -237,7 +237,7 @@
 
 <script>
 "use strict";
-const CURRENT_VERSION = "1.2.0"; 
+const CURRENT_VERSION = "1.2.1"; 
 
 /** ==========================================================================
  * [1] GAME DATA & GEOMETRY
@@ -278,11 +278,14 @@ fetch('https://raw.githubusercontent.com/monkeytypegame/monkeytype/master/fronte
     .then(res => res.json())
     .then(data => {
         if (data.words && data.words.length > 0) {
-            DATA.DICTIONARY = data.words;
+            DATA.DICTIONARY = [];
             DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] };
-            DATA.DICTIONARY.forEach(w => {
+            data.words.forEach(w => {
+                w = w.replace(/\s+/g, ''); // Ensure NO spaces exist anywhere in the words
+                if (w.length < 3) return;
+                DATA.DICTIONARY.push(w);
                 let len = w.length;
-                if(len < 3) len = 3; if(len > 8) len = 8;
+                if(len > 8) len = 8;
                 if(!DICT_BUCKETS[len]) DICT_BUCKETS[len] = [];
                 DICT_BUCKETS[len].push(w);
             });
@@ -291,9 +294,14 @@ fetch('https://raw.githubusercontent.com/monkeytypegame/monkeytype/master/fronte
     })
     .catch(e => {
         console.warn("Using offline dictionary fallback.");
-        DATA.DICTIONARY = ["the","and","you","that","was","for","are","with","his","they","this","have","from","one","had","word","but","not","what","all","were","when","your","can","said","there","use","each","which","she","how","their","will","other","about","out","many","then","them","these","some","her","would","make","like","him","into","time","has","look","two","more","write","see","number","way","could","people","than","first","water","been","call","who","oil","its","now","find","long","down","day","did","get","come","made","may","part"];
-        DATA.DICTIONARY.forEach(w => {
-            let len = w.length; if(len < 3) len = 3; if(len > 6) len = 6;
+        let offlineDict = ["the","and","you","that","was","for","are","with","his","they","this","have","from","one","had","word","but","not","what","all","were","when","your","can","said","there","use","each","which","she","how","their","will","other","about","out","many","then","them","these","some","her","would","make","like","him","into","time","has","look","two","more","write","see","number","way","could","people","than","first","water","been","call","who","oil","its","now","find","long","down","day","did","get","come","made","may","part"];
+        
+        DATA.DICTIONARY = [];
+        offlineDict.forEach(w => {
+            w = w.replace(/\s+/g, ''); // Ensure NO spaces
+            if (w.length < 3) return;
+            DATA.DICTIONARY.push(w);
+            let len = w.length; if(len > 6) len = 6;
             DICT_BUCKETS[len].push(w);
         });
     });
@@ -415,9 +423,12 @@ function fireEMP() {
             STATE.bossRef.active = false;
             createExplosion(STATE.bossRef.x, STATE.bossRef.y, STATE.bossRef.color); AudioFX.explode();
             if(STATE.bossRef.state === 'tractor' && STATE.bossRef.targetKey !== 'space') {
-                let tk = STATE.bossRef.targetKey; STATE.activeKeys[tk].isDual = true; 
-                AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] RESCUED! DUAL FIRE UNLOCKED!`, canvas.width/2, STATE.bossRef.y, '#00ff66');
-                particles.push(new RescueParticle(STATE.bossRef.x, STATE.bossRef.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
+                let tk = STATE.bossRef.targetKey; 
+                if (STATE.activeKeys[tk]) {
+                    STATE.activeKeys[tk].isDual = true; 
+                    AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] SECURED! DUAL FIRE UNLOCKED!`, canvas.width/2, STATE.bossRef.y, '#00ff66');
+                    particles.push(new RescueParticle(STATE.bossRef.x, STATE.bossRef.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
+                }
             }
             STATE.bossRef = null;
         } else {
@@ -798,13 +809,16 @@ class Laser {
             
             if(this.target.isBoss) {
                 createExplosion(this.x, this.y, '#fff'); 
+                this.target.hp--; // Boss takes damage on laser hit
+                
                 if (this.target.hp <= 0) {
                     this.target.active = false; STATE.bossRef = null;
                     createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
                     if(this.target.state === 'tractor' && this.target.targetKey && this.target.targetKey !== 'space') {
                         let tk = this.target.targetKey;
                         if(STATE.activeKeys[tk]) {
-                            STATE.activeKeys[tk].isDual = true; AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] RESCUED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
+                            STATE.activeKeys[tk].isDual = true; AudioFX.rescue(); 
+                            createPopText(`[${tk.toUpperCase()}] SECURED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
                             particles.push(new RescueParticle(this.target.x, this.target.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
                         }
                     }
@@ -917,7 +931,8 @@ function getWordForWave(wave, isBoss = false) {
     if (unused.length === 0) { usedWords.clear(); unused = validWords; }
     
     let word = unused[Math.floor(Math.random() * unused.length)];
-    usedWords.add(word); return word;
+    usedWords.add(word); 
+    return word;
 }
 
 function spawnWave() {
@@ -1130,6 +1145,11 @@ document.addEventListener('keydown', (e) => {
         document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 200);
         if(!STATE.bioTracker[inputChar]) STATE.bioTracker[inputChar] = { presses:0, misses:0, latencies:[] };
         STATE.bioTracker[inputChar].misses++;
+
+        // PENALTY: Boss instantly steals the letter if you make a mistake while it is hovering!
+        if (STATE.bossRef && STATE.bossRef.state === 'tractor' && STATE.bossRef.typedIndex < STATE.bossRef.word.length) {
+            STATE.bossRef.tractorTimer = 8000;
+        }
     }
     lastKeyPress = now;
 });
