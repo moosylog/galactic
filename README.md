@@ -1,6 +1,6 @@
 <div align="center">
 
-# GALACTIC KEYSTROKE: CHIRAL SWARM  
+# GALACTIC KEYSTROKE
 **A fast-paced typing defense game for split keyboards**
 
 [![HTML5](https://img.shields.io/badge/HTML5-Strict-E34F26?style=for-the-badge&logo=html5&logoColor=white)](#)
