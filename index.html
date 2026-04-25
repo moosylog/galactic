@@ -431,7 +431,6 @@ function fireEMP() {
                 let tk = STATE.bossRef.targetKey; 
                 if (STATE.activeKeys[tk]) {
                     STATE.activeKeys[tk].isDual = true; 
-                    // Key physically returns immediately if boss dies during lift
                     STATE.activeKeys[tk].isAbducted = false;
                     AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] SECURED! DUAL FIRE UNLOCKED!`, canvas.width/2, STATE.bossRef.y, '#00ff66');
                     particles.push(new RescueParticle(STATE.bossRef.x, STATE.bossRef.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
@@ -621,9 +620,8 @@ class BossShip {
         
         this.x = canvas.width / 2; this.y = -100 * STATE.sf;
         this.targetY = 200 * STATE.sf;
-        // States: enter, tractor, lifting, abduct
         this.state = 'enter'; this.tractorTimer = 0; this.liftTimer = 0; this.targetKey = null;
-        this.keyOriginalX = 0; this.keyOriginalY = 0; // For Galaga animation
+        this.keyOriginalX = 0; this.keyOriginalY = 0;
         this.color = '#ffea00';
         STATE.bossRef = this;
     }
@@ -645,19 +643,18 @@ class BossShip {
             this.x = (canvas.width/2) + Math.sin(time/500) * (50 * STATE.sf);
             this.y = this.targetY + Math.cos(time/400) * (20 * STATE.sf);
             
-            // Time limit reached, start Galaga lift animation
             if (this.tractorTimer > 8000 && this.targetKey !== 'space') {
                 this.initAbductionSequence();
             }
         } else if (this.state === 'lifting') {
-            const LIFT_DURATION = 1500; // ms for key to float up
+            const LIFT_DURATION = 1500;
             this.liftTimer += dt;
             
             this.x = (canvas.width/2) + Math.sin(time/500) * (50 * STATE.sf);
             this.y = this.targetY + Math.cos(time/400) * (20 * STATE.sf);
             
             if (this.liftTimer >= LIFT_DURATION) {
-                this.state = 'abduct'; // Proceed to fly away
+                this.state = 'abduct';
             }
         } else if (this.state === 'abduct') {
             this.y -= 5 * STATE.sf * (dt/16);
@@ -665,7 +662,6 @@ class BossShip {
         }
     }
     
-    // Penalize player immediately, start "Galaga" lift visual
     initAbductionSequence() {
         if (this.state !== 'tractor' || this.targetKey === 'space') return;
         
@@ -676,7 +672,6 @@ class BossShip {
         if (kData) {
             this.keyOriginalX = kData.x;
             this.keyOriginalY = kData.y;
-            // Mark logically abducted immediately to stop inputs/combo
             kData.isAbducted = true; 
             if(!STATE.stolenKeys.includes(this.targetKey)) STATE.stolenKeys.push(this.targetKey);
             createPopText(`KEY [${this.targetKey.toUpperCase()}] ABDUCTED!`, canvas.width/2, this.y - (70*STATE.sf), '#ff0055');
@@ -686,45 +681,95 @@ class BossShip {
     draw(ctx, dt) {
         ctx.save(); ctx.translate(this.x, this.y);
         let sizeMod = STATE.sf * 4.0; 
+        let now = Date.now();
         
-        // Thrusters
-        let throb = 0.5 + Math.sin(Date.now()/50)*0.5;
+        // Thrusters (Top/Back of the bug shape)
+        let throb = 0.5 + Math.sin(now/50)*0.5;
         ctx.shadowBlur = 30 * STATE.sf; ctx.shadowColor = 'var(--neon-pink)';
         ctx.fillStyle = `rgba(255, 0, 85, ${throb})`;
-        ctx.beginPath(); ctx.arc(-15*sizeMod, 12*sizeMod, 8*sizeMod, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(15*sizeMod, 12*sizeMod, 8*sizeMod, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-12*sizeMod, -22*sizeMod, 8*sizeMod, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(12*sizeMod, -22*sizeMod, 8*sizeMod, 0, Math.PI*2); ctx.fill();
 
-        // Tractor beam visual
+        // Volumetric Tractor Beam
         if (this.state === 'tractor' || this.state === 'lifting') {
-            ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = 'var(--neon-blue)';
-            let beamGrad = ctx.createLinearGradient(0, 20*sizeMod, 0, 1000*STATE.sf);
-            beamGrad.addColorStop(0, 'rgba(0, 243, 255, 0.8)');
+            ctx.shadowBlur = 25 * STATE.sf;
+            ctx.shadowColor = 'var(--neon-blue)';
+            let beamAlpha = 0.3 + Math.sin(now / 150) * 0.1;
+            let beamGrad = ctx.createLinearGradient(0, 10*sizeMod, 0, 1000*STATE.sf);
+            beamGrad.addColorStop(0, `rgba(0, 243, 255, ${beamAlpha + 0.4})`);
             beamGrad.addColorStop(1, 'rgba(0, 243, 255, 0.0)');
             ctx.fillStyle = beamGrad;
+            
             ctx.beginPath();
-            ctx.moveTo(-25*sizeMod, 15*sizeMod); ctx.lineTo(25*sizeMod, 15*sizeMod);
+            ctx.moveTo(-15*sizeMod, 10*sizeMod); ctx.lineTo(15*sizeMod, 10*sizeMod);
             ctx.lineTo(80*sizeMod, 1000*STATE.sf); ctx.lineTo(-80*sizeMod, 1000*STATE.sf);
             ctx.fill();
+
+            // Pulsating descent rings
+            ctx.strokeStyle = `rgba(0, 243, 255, ${beamAlpha + 0.5})`;
+            ctx.lineWidth = 3 * STATE.sf;
+            for(let i=0; i<6; i++) {
+                let waveOffset = ((now / 8) + (i * 200)) % 1000;
+                if(waveOffset > 15) {
+                    let waveWidth = 15*sizeMod + (waveOffset / 1000) * (65*sizeMod);
+                    ctx.beginPath();
+                    ctx.moveTo(-waveWidth, waveOffset * STATE.sf);
+                    ctx.quadraticCurveTo(0, (waveOffset + 20) * STATE.sf, waveWidth, waveOffset * STATE.sf);
+                    ctx.stroke();
+                }
+            }
         }
 
-        // Hull
-        ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color; 
-        ctx.strokeStyle = this.color; ctx.lineWidth = 3 * STATE.sf;
-        
+        // 2027 Galagan Commander Hull (Cyber-Fly/Beetle Shape)
+        ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = 'var(--neon-purple)';
+        ctx.strokeStyle = 'var(--neon-purple)'; ctx.lineWidth = 3 * STATE.sf;
+
+        // Carapace and Mandibles
         ctx.beginPath();
-        ctx.moveTo(0, -18 * sizeMod); ctx.lineTo(35 * sizeMod, 10 * sizeMod); 
-        ctx.lineTo(15 * sizeMod, 5 * sizeMod); ctx.lineTo(0, 20 * sizeMod); 
-        ctx.lineTo(-15 * sizeMod, 5 * sizeMod); ctx.lineTo(-35 * sizeMod, 10 * sizeMod);
-        ctx.closePath(); 
-        
-        let hullGrad = ctx.createLinearGradient(0, -20*sizeMod, 0, 20*sizeMod);
-        hullGrad.addColorStop(0, '#222'); hullGrad.addColorStop(1, '#000');
+        ctx.arc(0, -5*sizeMod, 22*sizeMod, Math.PI, 0); // Top Dome
+        ctx.bezierCurveTo(25*sizeMod, 10*sizeMod, 30*sizeMod, 25*sizeMod, 15*sizeMod, 35*sizeMod); // Right Outer Mandible
+        ctx.lineTo(10*sizeMod, 20*sizeMod); // Right Inner Mandible
+        ctx.lineTo(8*sizeMod, 5*sizeMod); // Right Mouth Edge
+        ctx.lineTo(-8*sizeMod, 5*sizeMod); // Left Mouth Edge
+        ctx.lineTo(-10*sizeMod, 20*sizeMod); // Left Inner Mandible
+        ctx.lineTo(-15*sizeMod, 35*sizeMod); // Left Outer Mandible
+        ctx.bezierCurveTo(-30*sizeMod, 25*sizeMod, -25*sizeMod, 10*sizeMod, -22*sizeMod, -5*sizeMod);
+        ctx.closePath();
+
+        let hullGrad = ctx.createLinearGradient(0, -25*sizeMod, 0, 35*sizeMod);
+        hullGrad.addColorStop(0, '#1a0525');
+        hullGrad.addColorStop(0.5, '#0d0214');
+        hullGrad.addColorStop(1, '#000');
         ctx.fillStyle = hullGrad; ctx.fill(); ctx.stroke();
+
+        // Huge Insectoid Eyes
+        ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = 'var(--neon-pink)';
+        ctx.fillStyle = 'rgba(255, 0, 85, 0.9)';
         
-        // Inner detail lines
-        ctx.beginPath(); ctx.moveTo(0, -18*sizeMod); ctx.lineTo(0, 20*sizeMod); ctx.strokeStyle = 'rgba(255,234,0,0.3)'; ctx.stroke();
-        
-        // Draw Boss Word
+        // Left Eye
+        ctx.beginPath();
+        ctx.ellipse(-12*sizeMod, -2*sizeMod, 6*sizeMod, 10*sizeMod, -Math.PI/6, 0, Math.PI*2);
+        ctx.fill();
+        // Right Eye
+        ctx.beginPath();
+        ctx.ellipse(12*sizeMod, -2*sizeMod, 6*sizeMod, 10*sizeMod, Math.PI/6, 0, Math.PI*2);
+        ctx.fill();
+
+        // Eye Facet Outlines
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 1 * STATE.sf;
+        ctx.beginPath(); ctx.ellipse(-12*sizeMod, -2*sizeMod, 6*sizeMod, 10*sizeMod, -Math.PI/6, 0, Math.PI*2); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(12*sizeMod, -2*sizeMod, 6*sizeMod, 10*sizeMod, Math.PI/6, 0, Math.PI*2); ctx.stroke();
+
+        // Glowing Maw (Tractor beam emitter center)
+        ctx.shadowBlur = 20 * STATE.sf;
+        ctx.shadowColor = 'var(--neon-blue)';
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.ellipse(0, 5*sizeMod, 6*sizeMod, 3*sizeMod, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Draw Boss Word (Shifted up to float over carapace)
         ctx.shadowBlur = 0; 
         let fSize = Math.floor(40 * STATE.sf);
         ctx.font = `900 ${fSize}px 'Orbitron'`; 
@@ -741,47 +786,58 @@ class BossShip {
             else if (i === this.typedIndex) { ctx.fillStyle = '#fff'; ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = '#fff'; } 
             else { ctx.fillStyle = '#ffea00'; ctx.shadowBlur = 0; }
             
-            ctx.fillText(char, startX, -35 * sizeMod);
+            ctx.fillText(char, startX, -40 * sizeMod);
             startX += cWidth;
             ctx.shadowBlur = 0;
         }
         
-        ctx.restore(); // Restore from boss translation
+        ctx.restore();
 
-        // Galaga-style Lifting Animation (Draw key in screen space floating up)
+        // Galaga-style Lifting Animation (Rapid Spin & Scale)
         if(this.state === 'lifting' && this.targetKey) {
             const LIFT_DURATION = 1500;
             let progress = Math.min(1.0, this.liftTimer / LIFT_DURATION);
             
-            // Interpolate position from keyboard to boss center
             let curX = this.keyOriginalX + (this.x - this.keyOriginalX) * progress;
             let curY = this.keyOriginalY + (this.y - this.keyOriginalY) * progress;
             
-            // Re-draw the key UI element at the interpolated position
             let kData = STATE.activeKeys[this.targetKey];
             if (kData) {
                 ctx.save();
                 ctx.translate(curX, curY);
+                
+                // Rotates 3 full times
+                ctx.rotate(progress * Math.PI * 6);
+                
+                // Scale down
+                let scaleFactor = 1.0 - (progress * 0.6); 
+                ctx.scale(scaleFactor, scaleFactor);
+
                 ctx.lineWidth = 2 * STATE.sf; ctx.textAlign = "center"; ctx.textBaseline = "middle";
                 
-                // Key border/shadow (Pink/Red to indicate danger)
                 ctx.strokeStyle = 'var(--neon-pink)'; ctx.shadowBlur = 30 * STATE.sf; ctx.shadowColor = 'var(--neon-pink)';
                 
-                // Captured key background (gradient pulses based on progress)
                 let keyGrad = ctx.createLinearGradient(0, -kData.h/2, 0, kData.h/2);
-                let alpha = 0.5 + progress * 0.5; // Gets brighter/more solid as it nears ship
+                let alpha = 0.5 + progress * 0.5; 
                 keyGrad.addColorStop(0, `rgba(255, 0, 85, ${alpha})`); 
                 keyGrad.addColorStop(1, `rgba(150, 0, 40, ${alpha * 0.5})`);
                 ctx.fillStyle = keyGrad;
 
-                // Draw Key Frame
                 ctx.beginPath(); ctx.roundRect(-kData.w/2 + 2, -kData.h/2 + 2, kData.w - 4, kData.h - 4, 6 * STATE.sf); ctx.fill(); ctx.stroke();
                 
-                // Draw Character
                 ctx.shadowBlur = 10 * STATE.sf; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff'; 
                 let fontSize = Math.max(14, kData.h * 0.5); 
                 ctx.font = `bold ${fontSize}px 'Orbitron'`; 
                 ctx.fillText(this.targetKey.toUpperCase(), 0, 2 * STATE.sf);
+                
+                // HUD Reticle
+                ctx.strokeStyle = `rgba(0, 243, 255, ${1 - progress})`;
+                ctx.lineWidth = 4 * STATE.sf;
+                ctx.setLineDash([10 * STATE.sf, 10 * STATE.sf]);
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.max(kData.w, kData.h) * 0.8, 0, Math.PI * 2);
+                ctx.stroke();
+
                 ctx.restore();
             }
         }
@@ -833,24 +889,56 @@ class SwarmEnemy {
     draw(ctx) {
         ctx.save(); ctx.translate(this.x, this.y);
         let sizeMod = STATE.sf * 1.5;
+        let now = Date.now();
         
-        // Engine flare
-        let engineSize = 4 * sizeMod + Math.sin(Date.now()/50 + this.index) * 2;
+        // Twin engine flares (Galaga Style)
+        let enginePulse = Math.sin(now/50 + this.index) * 2;
         ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(0, 10*sizeMod, engineSize, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-5*sizeMod, 12*sizeMod, 3*sizeMod + enginePulse, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(5*sizeMod, 12*sizeMod, 3*sizeMod + enginePulse, 0, Math.PI*2); ctx.fill();
 
-        // Hull
+        // Cyber-Insect Hull (Galaga 2027 Style)
         ctx.strokeStyle = this.color; ctx.lineWidth = 2 * STATE.sf;
+        
         ctx.beginPath();
-        ctx.moveTo(0, -18 * sizeMod); ctx.lineTo(15 * sizeMod, 10 * sizeMod);
-        ctx.lineTo(0, 2 * sizeMod); ctx.lineTo(-15 * sizeMod, 10 * sizeMod);
+        // Mandibles
+        ctx.moveTo(-4 * sizeMod, -16 * sizeMod);
+        ctx.lineTo(-2 * sizeMod, -22 * sizeMod);
+        ctx.lineTo(0, -16 * sizeMod);
+        ctx.lineTo(2 * sizeMod, -22 * sizeMod);
+        ctx.lineTo(4 * sizeMod, -16 * sizeMod);
+        
+        // Sweeping Right Wing
+        ctx.bezierCurveTo(18 * sizeMod, -16 * sizeMod, 22 * sizeMod, 0, 16 * sizeMod, 10 * sizeMod);
+        ctx.lineTo(6 * sizeMod, 8 * sizeMod); // Right Wing Bottom
+        ctx.lineTo(0, 12 * sizeMod);          // Core Cutout Bottom
+        ctx.lineTo(-6 * sizeMod, 8 * sizeMod); // Left Wing Bottom
+        
+        // Sweeping Left Wing
+        ctx.lineTo(-16 * sizeMod, 10 * sizeMod);
+        ctx.bezierCurveTo(-22 * sizeMod, 0, -18 * sizeMod, -16 * sizeMod, -4 * sizeMod, -16 * sizeMod);
         ctx.closePath(); 
         
-        let hullGrad = ctx.createLinearGradient(0, -18*sizeMod, 0, 10*sizeMod);
-        hullGrad.addColorStop(0, '#333'); hullGrad.addColorStop(1, '#050505');
+        let hullGrad = ctx.createLinearGradient(0, -22*sizeMod, 0, 12*sizeMod);
+        hullGrad.addColorStop(0, '#111'); 
+        hullGrad.addColorStop(0.5, '#223'); 
+        hullGrad.addColorStop(1, '#050505');
         ctx.fillStyle = hullGrad; ctx.fill(); ctx.stroke();
         
+        // Inner Wing Details (Neon struts)
+        ctx.beginPath();
+        ctx.moveTo(0, -10*sizeMod); ctx.lineTo(12*sizeMod, 0);
+        ctx.moveTo(0, -10*sizeMod); ctx.lineTo(-12*sizeMod, 0);
+        ctx.strokeStyle = `rgba(255,255,255,0.2)`; ctx.stroke();
+
+        // Central Glowing Eye / Core
+        ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.ellipse(0, -6*sizeMod, 4*sizeMod, 6*sizeMod, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.ellipse(0, -7*sizeMod, 1.5*sizeMod, 3*sizeMod, 0, 0, Math.PI*2); ctx.fill();
+
         // Target Reticle
         if(STATE.currentTarget && STATE.currentTarget.wordId === this.wordId && STATE.currentTarget.index === this.index) {
             ctx.shadowColor = '#fff'; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1 * STATE.sf;
@@ -864,7 +952,7 @@ class SwarmEnemy {
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
         let fSize = Math.max(16, Math.floor(22 * STATE.sf));
         ctx.font = `bold ${fSize}px 'Orbitron'`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(this.char.toUpperCase(), 0, -30 * sizeMod);
+        ctx.fillText(this.char.toUpperCase(), 0, -35 * sizeMod);
         ctx.restore();
     }
 }
@@ -930,7 +1018,7 @@ class Laser {
                         let tk = this.target.targetKey;
                         if(STATE.activeKeys[tk]) {
                             STATE.activeKeys[tk].isDual = true; 
-                            STATE.activeKeys[tk].isAbducted = false; // Key physically returns immediately
+                            STATE.activeKeys[tk].isAbducted = false;
                             AudioFX.rescue(); 
                             createPopText(`[${tk.toUpperCase()}] SECURED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
                             particles.push(new RescueParticle(this.target.x, this.target.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
@@ -1009,7 +1097,6 @@ function buildHUD() {
 function drawShipHUD(time) {
     ctx.save(); ctx.lineWidth = 2 * STATE.sf; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     
-    // Draw Horizon / Cockpit separator
     let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
     ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)'; ctx.lineWidth = 2 * STATE.sf; 
     ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = 'var(--neon-blue)';
@@ -1028,7 +1115,6 @@ function drawShipHUD(time) {
         
         ctx.strokeStyle = k.color; ctx.shadowBlur = 10 * STATE.sf; ctx.shadowColor = k.color;
         
-        // Key Background Gradient
         let keyGrad = ctx.createLinearGradient(k.x, k.y - k.h/2, k.x, k.y + k.h/2);
         if(k.isDual) {
             ctx.strokeStyle = 'var(--neon-yellow)'; ctx.shadowColor = 'var(--neon-yellow)'; 
@@ -1041,12 +1127,8 @@ function drawShipHUD(time) {
         }
         ctx.fillStyle = keyGrad;
 
-        // Note: Tractor beam logic now handled inside BossShip class for Galaga animation
-        
-        // Draw Key Frame
         ctx.beginPath(); ctx.roundRect(k.x - k.w/2 + 2, k.y - k.h/2 + 2, k.w - 4, k.h - 4, 6 * STATE.sf); ctx.fill(); ctx.stroke();
         
-        // Top highlight for 3D effect
         ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1 * STATE.sf; ctx.beginPath();
         ctx.moveTo(k.x - k.w/2 + 6, k.y - k.h/2 + 4); ctx.lineTo(k.x + k.w/2 - 6, k.y - k.h/2 + 4); ctx.stroke();
 
@@ -1077,7 +1159,7 @@ function spawnWave() {
     let isBossWave = (STATE.wave > 2 && STATE.wave % 3 === 0);
     
     if (isBossWave) {
-        UI.wordDisplay.style.opacity = '0'; // Force text hidden for boss
+        UI.wordDisplay.style.opacity = '0'; 
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
         let word = getWordForWave(STATE.wave, true); 
         
@@ -1085,7 +1167,7 @@ function spawnWave() {
         enemies.push(new BossShip(word, wordId));
         createPopText("BOSS INCOMING! DEFEND YOUR KEYS!", canvas.width/2, canvas.height/2, '#ffea00');
     } else {
-        UI.wordDisplay.style.opacity = '1'; // Show text for regular swarm
+        UI.wordDisplay.style.opacity = '1'; 
         let numWords = 1; 
         if (STATE.wave > 15) { numWords = Math.min(4, 2 + Math.floor((STATE.wave - 16) / 5)); }
         
@@ -1098,7 +1180,6 @@ function spawnWave() {
         UI.wordDisplay.innerText = displayStr.trim();
         UI.wordDisplay.classList.remove('word-flash'); void UI.wordDisplay.offsetWidth; UI.wordDisplay.classList.add('word-flash');
         
-        // Dynamic fade timer: 400ms for 1 word, +200ms for each additional word
         let fadeDelay = 200 + (numWords * 200);
         
         clearTimeout(STATE.wordFadeTimer); 
@@ -1148,16 +1229,13 @@ function gameLoop(time) {
     if(!STATE.active) return;
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
     
-    // Background Clear (Galaxy gradient)
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
     let spaceGrad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height, 0, bgCanvas.width/2, bgCanvas.height, bgCanvas.height);
     spaceGrad.addColorStop(0, '#0a0a2a'); spaceGrad.addColorStop(1, '#010103');
     bgCtx.fillStyle = spaceGrad; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-    // Subtle combo depth effect
     let depthMod = 1 + (STATE.combo * 0.02);
 
-    // Deep Field Stars (Slow Parallax)
     bgCtx.lineCap = 'round'; ctx.shadowBlur = 0;
     for(let s of stars) { 
         bgCtx.fillStyle = s.color || '#fff';
@@ -1167,11 +1245,10 @@ function gameLoop(time) {
         bgCtx.fillRect(s.x, s.y, sz, sz); 
     }
 
-    // Occasional Falling Star (Meteor)
-    if (!fallingStar && Math.random() < 0.003) { // Small spawn chance
+    if (!fallingStar && Math.random() < 0.003) {
         fallingStar = {
             x: Math.random() * canvas.width, y: -100,
-            vx: (Math.random() - 0.2) * 20 * STATE.sf, // angled down
+            vx: (Math.random() - 0.2) * 20 * STATE.sf,
             vy: (15 + Math.random() * 10) * STATE.sf,
             life: 1.0, color: Math.random() > 0.5 ? 'var(--neon-blue)' : 'var(--neon-yellow)'
         };
@@ -1195,7 +1272,7 @@ function gameLoop(time) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-if (STATE.currentTarget) {
+    if (STATE.currentTarget) {
         let alive = false;
         for(let e of enemies) { if(!e.isBoss && e.wordId === STATE.currentTarget.wordId && e.index >= STATE.currentTarget.index) { alive = true; break; } }
         if(!alive) { STATE.currentTarget = null; } 
@@ -1205,7 +1282,6 @@ if (STATE.currentTarget) {
         STATE.isSpawning = true; STATE.wave++; STATE.hyperspaceTimer = 1500; updateUI(); setTimeout(spawnWave, 1500);
     }
 
-    // Draw Enemy swarm lines
     const wordsMap = {};
     for(let i=0; i<enemies.length; i++) { let e = enemies[i]; if(!e.isBoss) { if(!wordsMap[e.wordId]) wordsMap[e.wordId] = []; wordsMap[e.wordId].push(e); } }
     for(let wId in wordsMap) {
@@ -1221,12 +1297,10 @@ if (STATE.currentTarget) {
         }
     }
 
-    // Entities
     for(let i=enemies.length-1; i>=0; i--) { if(!enemies[i].active) enemies.splice(i, 1); else { enemies[i].update(dt, time); enemies[i].draw(ctx, dt); } }
     for(let i=bonusDrones.length-1; i>=0; i--) { if(!bonusDrones[i].active) bonusDrones.splice(i, 1); else { bonusDrones[i].update(dt); bonusDrones[i].draw(ctx); } }
     for(let i=lasers.length-1; i>=0; i--) { if(!lasers[i].active) lasers.splice(i, 1); else { lasers[i].update(dt); lasers[i].draw(ctx); } }
     
-    // Spark Particles
     ctx.globalAlpha = 1.0; const pBatches = {};
     for(let i=particles.length-1; i>=0; i--) {
         let p = particles[i]; p.update(dt);
@@ -1334,7 +1408,6 @@ document.addEventListener('keydown', (e) => {
         if(!STATE.bioTracker[inputChar]) STATE.bioTracker[inputChar] = { presses:0, misses:0, latencies:[] };
         STATE.bioTracker[inputChar].misses++;
 
-        // PENALTY: Mistake triggers immediate abduction visual sequence
         if (STATE.bossRef && STATE.bossRef.state === 'tractor' && STATE.bossRef.typedIndex < STATE.bossRef.word.length) {
             STATE.bossRef.initAbductionSequence();
         }
