@@ -55,7 +55,6 @@
         }
         #weakness-tracker span { color: var(--neon-pink); font-weight: bold;}
 
-        /* Target Queue (Flash Memory Mechanic) */
         #target-queue {
             position: absolute; top: 2vh; left: 50%; transform: translateX(-50%);
             display: flex; flex-direction: column; align-items: center; z-index: 50; pointer-events: none;
@@ -104,7 +103,7 @@
         .upload-btn {
             display: block; text-align: center; cursor: pointer; box-sizing: border-box;
             background: rgba(255, 234, 0, 0.1); color: var(--neon-yellow); border: 1px solid var(--neon-yellow);
-            padding: 12px; border-radius: 5px; margin-top: 5px; transition: 0.3s; font-size: 1rem; text-transform: uppercase; font-weight: bold;
+            padding: 12px; border-radius: 5px; margin-top: 5px; transition: 0.3s; font-size: 1.1rem; text-transform: uppercase; font-weight: bold;
         }
         .upload-btn:hover { background: var(--neon-yellow); color: #000; box-shadow: 0 0 15px var(--neon-yellow); }
 
@@ -215,7 +214,7 @@
                 </div>
             </div>
             
-            <button class="btn-action" onclick="startGame()">INITIALIZE DEFENSE</button>
+            <button class="btn-action" id="btn-start" onclick="startGame()">INITIALIZE DEFENSE</button>
             <div class="cache-reset" onclick="factoryReset()">⚠️ WIPE DATA & RESET CACHE</div>
         </div>
     </div>
@@ -238,7 +237,7 @@
 
 <script>
 "use strict";
-const CURRENT_VERSION = "1.1.3"; // Ensures clean cache for users of previous versions
+const CURRENT_VERSION = "1.2.0"; 
 
 /** ==========================================================================
  * [1] GAME DATA & GEOMETRY
@@ -267,19 +266,40 @@ const DATA = {
         'N1':'1', 'N2':'2', 'N3':'3', 'N4':'4', 'N5':'5', 'N6':'6', 'N7':'7', 'N8':'8', 'N9':'9', 'N0':'0'
     },
     IGN_KEYS: ['ESC','TAB','LSHFT','RSHFT','LCTRL','RCTRL','LALT','RALT','LGUI','RGUI','MO1','MO2','MAGIC','LOWER','RAISE','RET','BSPC','DEL','CAPS','ENTER','BACKSPACE','DELETE'],
-    DICTIONARY: ["the","and","you","that","was","for","are","with","his","they","this","have","from","one","had","word","but","not","what","all","were","when","your","can","said","there","use","each","which","she","how","their","will","other","about","out","many","then","them","these","some","her","would","make","like","him","into","time","has","look","two","more","write","see","number","way","could","people","than","first","water","been","call","who","oil","its","now","find","long","down","day","did","get","come","made","may","part"]
+    DICTIONARY: []
 };
 
-const DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[] };
-DATA.DICTIONARY.forEach(w => {
-    if(w.length === 3) DICT_BUCKETS[3].push(w); else if(w.length === 4) DICT_BUCKETS[4].push(w);
-    else if(w.length === 5) DICT_BUCKETS[5].push(w); else if(w.length >= 6) DICT_BUCKETS[6].push(w);
-});
+let DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] };
 let usedWords = new Set();
 let customLayoutArray = null;
 
+// Async Background Dictionary Load
+fetch('https://raw.githubusercontent.com/monkeytypegame/monkeytype/master/frontend/static/languages/english.json')
+    .then(res => res.json())
+    .then(data => {
+        if (data.words && data.words.length > 0) {
+            DATA.DICTIONARY = data.words;
+            DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] };
+            DATA.DICTIONARY.forEach(w => {
+                let len = w.length;
+                if(len < 3) len = 3; if(len > 8) len = 8;
+                if(!DICT_BUCKETS[len]) DICT_BUCKETS[len] = [];
+                DICT_BUCKETS[len].push(w);
+            });
+            console.log("Online Dictionary Loaded");
+        }
+    })
+    .catch(e => {
+        console.warn("Using offline dictionary fallback.");
+        DATA.DICTIONARY = ["the","and","you","that","was","for","are","with","his","they","this","have","from","one","had","word","but","not","what","all","were","when","your","can","said","there","use","each","which","she","how","their","will","other","about","out","many","then","them","these","some","her","would","make","like","him","into","time","has","look","two","more","write","see","number","way","could","people","than","first","water","been","call","who","oil","its","now","find","long","down","day","did","get","come","made","may","part"];
+        DATA.DICTIONARY.forEach(w => {
+            let len = w.length; if(len < 3) len = 3; if(len > 6) len = 6;
+            DICT_BUCKETS[len].push(w);
+        });
+    });
+
 /** ==========================================================================
- * [2] STATE & UI CACHE
+ * [2] STATE, STORAGE & UI CACHE
  * ========================================================================== */
 const UI = {
     score: document.getElementById('ui-score'), wave: document.getElementById('ui-wave'),
@@ -322,7 +342,7 @@ function loadGameData() {
                 if(!UI.layoutSelect.querySelector('option[value="custom"]')) {
                     let opt = document.createElement('option'); opt.value = 'custom'; opt.innerText = 'Custom JSON Loaded'; UI.layoutSelect.appendChild(opt);
                 }
-                UI.uploadBtn.innerText = '✅ CUSTOM JSON LOADED';
+                UI.uploadBtn.innerText = '✅ MOERGO JSON LOADED';
             } else {
                 if (save.baseHardware) UI.hwSelect.value = save.baseHardware;
                 if (save.layout) UI.layoutSelect.value = save.layout;
@@ -473,7 +493,7 @@ const AudioFX = {
 };
 
 /** ==========================================================================
- * [4] UNIVERSAL JSON PARSER (Engrammer, ZMK, LayerForge)
+ * [4] UNIVERSAL JSON PARSER
  * ========================================================================== */
 function findBindings(node) {
     if (Array.isArray(node)) {
@@ -575,10 +595,100 @@ function updateLayoutString() {
 /** ==========================================================================
  * [5] ENTITY CLASSES
  * ========================================================================== */
+class BossShip {
+    constructor(word, wordId) {
+        this.word = word; this.wordId = wordId;
+        this.typedIndex = 0; this.hp = word.length;
+        this.isBoss = true; this.active = true;
+        
+        this.x = canvas.width / 2; this.y = -100 * STATE.sf;
+        this.targetY = 200 * STATE.sf;
+        this.state = 'enter'; this.tractorTimer = 0; this.targetKey = null;
+        this.color = '#ffea00';
+        STATE.bossRef = this;
+    }
+    
+    update(dt, time) {
+        if (this.state === 'enter') {
+            this.y += (this.targetY - this.y) * 0.05 * (dt/16);
+            if (Math.abs(this.targetY - this.y) < 5) {
+                this.state = 'tractor';
+                let validKeys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted);
+                this.targetKey = validKeys.length > 0 ? validKeys[Math.floor(Math.random() * validKeys.length)] : 'space';
+                if (this.targetKey !== 'space') {
+                    AudioFX.tractor(); 
+                    createPopText("TRACTOR BEAM: RESCUE REQUIRED!", canvas.width/2, this.y - (70 * STATE.sf), '#bc13fe');
+                }
+            }
+        } else if (this.state === 'tractor') {
+            this.tractorTimer += dt;
+            this.x = (canvas.width/2) + Math.sin(time/500) * (50 * STATE.sf);
+            this.y = this.targetY + Math.cos(time/400) * (20 * STATE.sf);
+            
+            if (this.tractorTimer > 8000 && this.targetKey !== 'space') {
+                this.state = 'abduct';
+                STATE.activeKeys[this.targetKey].isAbducted = true;
+                if(!STATE.stolenKeys.includes(this.targetKey)) STATE.stolenKeys.push(this.targetKey);
+                createPopText(`KEY [${this.targetKey.toUpperCase()}] ABDUCTED!`, canvas.width/2, this.y - (70*STATE.sf), '#ff0055');
+            }
+        } else if (this.state === 'abduct') {
+            this.y -= 5 * STATE.sf * (dt/16);
+            if (this.y < -150 * STATE.sf) { this.active = false; STATE.bossRef = null; }
+        }
+    }
+    
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y);
+        let sizeMod = STATE.sf * 4.0; 
+        
+        ctx.shadowBlur = 30 * STATE.sf; ctx.shadowColor = this.color; 
+        ctx.strokeStyle = this.color; ctx.lineWidth = 4 * STATE.sf;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, -15 * sizeMod); ctx.lineTo(35 * sizeMod, 10 * sizeMod); 
+        ctx.lineTo(15 * sizeMod, 5 * sizeMod); ctx.lineTo(0, 20 * sizeMod); 
+        ctx.lineTo(-15 * sizeMod, 5 * sizeMod); ctx.lineTo(-35 * sizeMod, 10 * sizeMod);
+        ctx.closePath(); 
+        ctx.fillStyle = 'rgba(10,5,0,0.95)'; ctx.fill(); ctx.stroke();
+        
+        ctx.shadowBlur = 0; 
+        let fSize = Math.floor(40 * STATE.sf);
+        ctx.font = `900 ${fSize}px 'Share Tech Mono'`; 
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        
+        let fullWidth = ctx.measureText(this.word.toUpperCase()).width;
+        let startX = -fullWidth / 2;
+        
+        for(let i=0; i<this.word.length; i++) {
+            let char = this.word[i].toUpperCase();
+            let cWidth = ctx.measureText(char).width;
+            
+            if (i < this.typedIndex) {
+                ctx.fillStyle = 'rgba(0, 255, 102, 0.4)';
+            } else if (i === this.typedIndex) {
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = '#fff';
+            } else {
+                ctx.fillStyle = '#ffea00'; ctx.shadowBlur = 0;
+            }
+            
+            ctx.fillText(char, startX, -35 * sizeMod);
+            startX += cWidth;
+            ctx.shadowBlur = 0;
+        }
+        
+        if(this.state === 'abduct' && this.targetKey && this.targetKey !== 'space') {
+            ctx.fillStyle = 'rgba(255,0,85,0.5)'; ctx.fillRect(-20*STATE.sf, 15*STATE.sf, 40*STATE.sf, 40*STATE.sf);
+            ctx.fillStyle = '#fff'; ctx.textAlign="center"; ctx.fillText(this.targetKey.toUpperCase(), 0, 35*STATE.sf);
+        }
+        ctx.restore();
+    }
+}
+
 class SwarmEnemy {
-    constructor(word, index, totalInWord, isBoss = false, wordId = null) {
+    constructor(word, index, totalInWord, wordId = null) {
         this.char = word[index].toLowerCase(); this.word = word; this.wordId = wordId || word; 
-        this.index = index; this.isBoss = isBoss;
+        this.index = index; this.isBoss = false;
         
         this.targetNode = STATE.activeKeys[this.char] || {x: canvas.width/2, y: canvas.height};
         this.state = 'enter'; 
@@ -586,15 +696,10 @@ class SwarmEnemy {
         
         let spacing = 70 * STATE.sf; let wordWidth = totalInWord * spacing;
         this.formX = (canvas.width/2) - (wordWidth/2) + (index * spacing);
-        this.formY = isBoss ? 200 * STATE.sf : (100 + (Math.random() * 100)) * STATE.sf;
+        this.formY = (100 + (Math.random() * 100)) * STATE.sf;
         
         this.active = true; this.targeted = false; 
         this.color = (this.targetNode.color === 'var(--neon-blue)') ? '#00f3ff' : '#ff0055';
-        
-        if (isBoss) {
-            this.color = '#ffea00'; this.state = 'boss_dive';
-            this.targetKey = null; this.tractorTimer = 0; STATE.bossRef = this;
-        }
     }
 
     update(dt, time) {
@@ -608,75 +713,38 @@ class SwarmEnemy {
         else if (this.state === 'hover') {
             this.x = this.formX + Math.sin(time/500 + this.index) * (20 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
-            let diveChance = STATE.wave <= 2 ? 0.01 : 0.0005 + (STATE.wave * 0.0005);
-            if(!this.isBoss && Math.random() < diveChance) this.state = 'dive';
+            let diveChance = STATE.wave <= 2 ? 0.001 : 0.0005 + (STATE.wave * 0.0005);
+            if(Math.random() < diveChance) this.state = 'dive';
         }
         else if (this.state === 'dive') {
             let dx = this.targetNode.x - this.x; this.x += dx * 0.02 * (dt/16);
-            let fallSpeed = STATE.wave <= 2 ? 0.6 : 0.8 + (STATE.wave * 0.2); 
+            let fallSpeed = STATE.wave <= 2 ? 0.4 : 0.8 + (STATE.wave * 0.2); 
             this.y += fallSpeed * STATE.sf * (dt/16); 
             this.x += Math.sin(time/100) * (5 * STATE.sf);
         }
-        else if (this.state === 'boss_dive') {
-            let tx = this.formX; let ty = 250 * STATE.sf;
-            this.x += (tx - this.x) * 0.05 * (dt/16); this.y += (ty - this.y) * 0.05 * (dt/16);
-            if(Math.abs(tx - this.x) < 5 && Math.abs(ty - this.y) < 5) {
-                this.state = 'tractor';
-                let midIndex = Math.floor(this.word.length / 2);
-                if (this.index === midIndex) {
-                    STATE.bossRef = this;
-                    let validKeys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted);
-                    this.targetKey = validKeys.length > 0 ? validKeys[Math.floor(Math.random() * validKeys.length)] : 'space';
-                    if(this.targetKey !== 'space') {
-                        AudioFX.tractor(); createPopText("TRACTOR BEAM: RESCUE REQUIRED!", canvas.width/2, this.y - (50 * STATE.sf), '#bc13fe');
-                    }
-                }
-            }
-        }
-        else if (this.state === 'tractor') {
-            this.tractorTimer += dt;
-            if(this.tractorTimer > 8000 && this.targetKey && this.targetKey !== 'space' && STATE.bossRef === this) {
-                this.state = 'abduct'; STATE.activeKeys[this.targetKey].isAbducted = true;
-                if(!STATE.stolenKeys.includes(this.targetKey)) STATE.stolenKeys.push(this.targetKey);
-                createPopText(`KEY [${this.targetKey.toUpperCase()}] ABDUCTED!`, canvas.width/2, this.y - (50*STATE.sf), '#ff0055');
-                createPopText(`SHOOT GOLD DRONE TO RESCUE!`, canvas.width/2, this.y - (20*STATE.sf), '#ffea00');
-            }
-        }
-        else if (this.state === 'abduct') {
-            this.y -= 5 * STATE.sf * (dt/16);
-            if(this.y < -100) { this.active = false; if(STATE.bossRef === this) STATE.bossRef = null; }
-        }
 
         let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
-        if(this.y > splitLine && !this.isBoss) { this.active = false; damagePlayer(10); createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; damagePlayer(10); createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {
         ctx.save(); ctx.translate(this.x, this.y);
-        let sizeMod = STATE.sf * (this.isBoss ? 2.5 : 1.3);
+        let sizeMod = STATE.sf * 1.3;
         ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color; ctx.strokeStyle = this.color; ctx.lineWidth = 3 * STATE.sf;
         
         ctx.beginPath();
-        if(this.isBoss) {
-            ctx.moveTo(0, -15 * sizeMod); ctx.lineTo(25 * sizeMod, 10 * sizeMod); ctx.lineTo(10 * sizeMod, 5 * sizeMod); ctx.lineTo(0, 15 * sizeMod); ctx.lineTo(-10 * sizeMod, 5 * sizeMod); ctx.lineTo(-25 * sizeMod, 10 * sizeMod);
-        } else {
-            ctx.moveTo(0, -15 * sizeMod); ctx.lineTo(18 * sizeMod, 10 * sizeMod); ctx.lineTo(0, 0); ctx.lineTo(-18 * sizeMod, 10 * sizeMod);
-        }
+        ctx.moveTo(0, -15 * sizeMod); ctx.lineTo(18 * sizeMod, 10 * sizeMod);
+        ctx.lineTo(0, 0); ctx.lineTo(-18 * sizeMod, 10 * sizeMod);
         ctx.closePath(); ctx.fillStyle = 'rgba(0,0,0,0.95)'; ctx.fill(); ctx.stroke();
         
         if(STATE.currentTarget && STATE.currentTarget.wordId === this.wordId && STATE.currentTarget.index === this.index) {
-            ctx.shadowColor = '#fff'; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, (this.isBoss ? 50 : 30) * sizeMod, 0, Math.PI*2); ctx.stroke();
+            ctx.shadowColor = '#fff'; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 30 * sizeMod, 0, Math.PI*2); ctx.stroke();
         }
 
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
-        let fSize = Math.max(16, Math.floor((this.isBoss ? 30 : 22) * STATE.sf));
+        let fSize = Math.max(16, Math.floor(22 * STATE.sf));
         ctx.font = `bold ${fSize}px 'Share Tech Mono'`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(this.char.toUpperCase(), 0, -28 * sizeMod);
-        
-        if(this.state === 'abduct' && this.targetKey && this.targetKey !== 'space' && STATE.bossRef === this) {
-            ctx.fillStyle = 'rgba(255,0,85,0.5)'; ctx.fillRect(-15*STATE.sf, 10*STATE.sf, 30*STATE.sf, 30*STATE.sf);
-            ctx.fillStyle = '#fff'; ctx.fillText(this.targetKey.toUpperCase(), 0, 25*STATE.sf);
-        }
         ctx.restore();
     }
 }
@@ -714,6 +782,7 @@ class Laser {
             
             if(this.target instanceof BonusDrone) {
                 this.target.active = false; createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.bonus();
+                
                 if (this.target.isRescue && STATE.stolenKeys.length > 0) {
                     let tk = STATE.stolenKeys.shift();
                     if(STATE.activeKeys[tk]) {
@@ -721,18 +790,23 @@ class Laser {
                         createPopText(`[${tk.toUpperCase()}] RESCUED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
                         particles.push(new RescueParticle(this.target.x, this.target.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
                     }
-                } else { addEmpCharge(25); STATE.score += 500; createPopText("+25% EMP INSTALLED!", this.target.x, this.target.y - 30, '#00ff66'); }
+                } else {
+                    addEmpCharge(25); STATE.score += 500; createPopText("+25% EMP INSTALLED!", this.target.x, this.target.y - 30, '#00ff66');
+                }
                 updateUI(); return;
             }
             
             if(this.target.isBoss) {
-                this.target.active = false; if(STATE.bossRef === this.target) STATE.bossRef = null;
-                createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
-                if(this.target.state === 'tractor' && this.target.targetKey && this.target.targetKey !== 'space') {
-                    let tk = this.target.targetKey;
-                    if(STATE.activeKeys[tk]) {
-                        STATE.activeKeys[tk].isDual = true; AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] RESCUED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
-                        particles.push(new RescueParticle(this.target.x, this.target.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
+                createExplosion(this.x, this.y, '#fff'); 
+                if (this.target.hp <= 0) {
+                    this.target.active = false; STATE.bossRef = null;
+                    createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
+                    if(this.target.state === 'tractor' && this.target.targetKey && this.target.targetKey !== 'space') {
+                        let tk = this.target.targetKey;
+                        if(STATE.activeKeys[tk]) {
+                            STATE.activeKeys[tk].isDual = true; AudioFX.rescue(); createPopText(`[${tk.toUpperCase()}] RESCUED! DUAL FIRE UNLOCKED!`, canvas.width/2, this.target.y, '#00ff66');
+                            particles.push(new RescueParticle(this.target.x, this.target.y, STATE.activeKeys[tk].x, STATE.activeKeys[tk].y, '#00ff66'));
+                        }
                     }
                 }
             } else {
@@ -830,27 +904,20 @@ function drawShipHUD(time) {
     ctx.restore();
 }
 
-function getWordForWave(wave) {
+function getWordForWave(wave, isBoss = false) {
     let targetLen = 3; if(wave > 3) targetLen = 4; if(wave > 7) targetLen = 5; if(wave > 11) targetLen = 6;
+    if(isBoss) targetLen = Math.min(8, targetLen + 2);
+
     let bucket = DICT_BUCKETS[targetLen] || DICT_BUCKETS[3]; 
-    
     let missingKeys = STATE.stolenKeys;
     let validWords = bucket.filter(w => !missingKeys.some(mk => w.includes(mk)));
     if (validWords.length === 0) validWords = bucket; 
     
-    let word = null;
-    for(let i=0; i<50; i++) { let cand = validWords[Math.floor(Math.random() * validWords.length)]; if(!usedWords.has(cand)) { word = cand; break; } }
-    if(!word) word = validWords[Math.floor(Math.random() * validWords.length)];
+    let unused = validWords.filter(w => !usedWords.has(w));
+    if (unused.length === 0) { usedWords.clear(); unused = validWords; }
+    
+    let word = unused[Math.floor(Math.random() * unused.length)];
     usedWords.add(word); return word;
-}
-
-function getBossWord() {
-    UI.weakTracker.style.display = 'block'; 
-    let weak = getWeakestChars(); UI.weakText.innerText = weak.join(', ').toUpperCase();
-
-    let cands = DATA.DICTIONARY.filter(w => w.length > 4 && w.length < 8);
-    cands.sort((a,b) => { let ca=0, cb=0; weak.forEach(c => { if(a.includes(c)) ca++; if(b.includes(c)) cb++; }); return cb - ca; });
-    return cands.length > 0 ? cands[0] : "galaxy";
 }
 
 function spawnWave() {
@@ -860,26 +927,34 @@ function spawnWave() {
     
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
-        let word = getBossWord(); UI.wordDisplay.innerText = word.toUpperCase();
+        let word = getWordForWave(STATE.wave, true); 
+        UI.wordDisplay.innerText = word.toUpperCase();
         UI.wordDisplay.classList.remove('word-flash'); void UI.wordDisplay.offsetWidth; UI.wordDisplay.classList.add('word-flash');
-        let wordId = "W" + Date.now();
-        for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, true, wordId));
+        
+        let wordId = "B" + Date.now();
+        enemies.push(new BossShip(word, wordId));
         createPopText("BOSS INCOMING! DEFEND YOUR KEYS!", canvas.width/2, canvas.height/2, '#ffea00');
     } else {
-        let numWords = 1; if (STATE.wave > 15) numWords = Math.min(4, 2 + Math.floor((STATE.wave - 16) / 5));
+        let numWords = 1; 
+        if (STATE.wave > 15) { numWords = Math.min(4, 2 + Math.floor((STATE.wave - 16) / 5)); }
+        
         let displayStr = "";
         for(let w=0; w<numWords; w++) {
-            let word = getWordForWave(STATE.wave); displayStr += word.toUpperCase() + " ";
+            let word = getWordForWave(STATE.wave, false); displayStr += word.toUpperCase() + " ";
             let wordId = "W" + Date.now() + w;
-            for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, false, wordId));
+            for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, wordId));
         }
         UI.wordDisplay.innerText = displayStr.trim();
         UI.wordDisplay.classList.remove('word-flash'); void UI.wordDisplay.offsetWidth; UI.wordDisplay.classList.add('word-flash');
     }
     
     clearTimeout(STATE.wordFadeTimer); STATE.wordFadeTimer = setTimeout(() => { UI.wordDisplay.style.opacity = '0'; }, 1200);
-    if (STATE.stolenKeys.length > 0) setTimeout(() => bonusDrones.push(new BonusDrone(true)), 2000);
-    else if(STATE.wave === 1 || Math.random() < 0.3) setTimeout(() => bonusDrones.push(new BonusDrone(false)), 2000); 
+    
+    if (STATE.stolenKeys.length > 0) {
+        setTimeout(() => bonusDrones.push(new BonusDrone(true)), 2000);
+    } else if(STATE.wave === 1 || Math.random() < 0.3) { 
+        setTimeout(() => bonusDrones.push(new BonusDrone(false)), 2000); 
+    }
 }
 
 function updateUI() {
@@ -934,7 +1009,7 @@ function gameLoop(time) {
 
     if (STATE.currentTarget) {
         let alive = false;
-        for(let e of enemies) { if(e.wordId === STATE.currentTarget.wordId && e.index >= STATE.currentTarget.index) { alive = true; break; } }
+        for(let e of enemies) { if(!e.isBoss && e.wordId === STATE.currentTarget.wordId && e.index >= STATE.currentTarget.index) { alive = true; break; } }
         if(!alive) { STATE.currentTarget = null; UI.wordDisplay.style.opacity = '1'; }
     }
 
@@ -943,7 +1018,7 @@ function gameLoop(time) {
     }
 
     const wordsMap = {};
-    for(let i=0; i<enemies.length; i++) { let e = enemies[i]; if(!wordsMap[e.wordId]) wordsMap[e.wordId] = []; wordsMap[e.wordId].push(e); }
+    for(let i=0; i<enemies.length; i++) { let e = enemies[i]; if(!e.isBoss) { if(!wordsMap[e.wordId]) wordsMap[e.wordId] = []; wordsMap[e.wordId].push(e); } }
     for(let wId in wordsMap) {
         let wEnemies = wordsMap[wId];
         if(wEnemies.length > 1) {
@@ -1008,15 +1083,21 @@ document.addEventListener('keydown', (e) => {
     let bonusMatch = bonusDrones.find(b => b.char === inputChar && b.active && !b.targeted);
     if(bonusMatch) { targetEnemy = bonusMatch; }
     
+    if(!targetEnemy && STATE.bossRef && STATE.bossRef.active) {
+        if(inputChar === STATE.bossRef.word[STATE.bossRef.typedIndex].toLowerCase()) {
+            targetEnemy = STATE.bossRef; seqMatched = true;
+        }
+    }
+    
     if(!targetEnemy && STATE.currentTarget) {
-        let nextInSeq = enemies.find(en => en.wordId === STATE.currentTarget.wordId && en.index === STATE.currentTarget.index && en.active && !en.targeted);
+        let nextInSeq = enemies.find(en => !en.isBoss && en.wordId === STATE.currentTarget.wordId && en.index === STATE.currentTarget.index && en.active && !en.targeted);
         if(nextInSeq && nextInSeq.char === inputChar) { targetEnemy = nextInSeq; seqMatched = true; }
     }
     
-    if(!targetEnemy) {
-        let matching = enemies.filter(en => en.char === inputChar && en.active && !en.targeted);
+    if(!targetEnemy && !STATE.bossRef) {
+        let matching = enemies.filter(en => !en.isBoss && en.char === inputChar && en.active && !en.targeted);
         if(matching.length > 0) {
-            matching.sort((a,b) => { if(a.state === 'dive' && b.state !== 'dive') return -1; if(b.state === 'dive' && a.state !== 'dive') return 1; if(a.isBoss && !b.isBoss) return -1; return b.y - a.y; });
+            matching.sort((a,b) => b.y - a.y);
             targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index };
             UI.wordDisplay.style.opacity = '0.5';
         }
@@ -1024,17 +1105,16 @@ document.addEventListener('keydown', (e) => {
 
     let now = performance.now();
     if(targetEnemy) {
-        targetEnemy.targeted = true;
-        if(!(targetEnemy instanceof BonusDrone)) {
-            STATE.currentTarget.index = targetEnemy.index + 1; 
-            if (seqMatched) { 
-                STATE.combo++; if(STATE.combo > STATE.maxCombo) STATE.maxCombo = STATE.combo; 
-                if(STATE.combo === 5) createPopText("NICE FLOW!", canvas.width/2, canvas.height/2 - 100, '#00ff66');
-                if(STATE.combo === 10) createPopText("CHIRAL SYNC!", canvas.width/2, canvas.height/2 - 100, '#00f3ff');
-                if(STATE.combo === 20) createPopText("UNSTOPPABLE!", canvas.width/2, canvas.height/2 - 100, '#bc13fe');
-            } 
-            else STATE.combo = 0; 
-        }
+        if(targetEnemy.isBoss) { targetEnemy.typedIndex++; }
+        else { targetEnemy.targeted = true; if(!(targetEnemy instanceof BonusDrone)) STATE.currentTarget.index = targetEnemy.index + 1; }
+        
+        if (seqMatched || (targetEnemy.isBoss && targetEnemy.typedIndex > 1)) { 
+            STATE.combo++; if(STATE.combo > STATE.maxCombo) STATE.maxCombo = STATE.combo; 
+            if(STATE.combo === 5) createPopText("NICE FLOW!", canvas.width/2, canvas.height/2 - 100, '#00ff66');
+            if(STATE.combo === 10) createPopText("CHIRAL SYNC!", canvas.width/2, canvas.height/2 - 100, '#00f3ff');
+            if(STATE.combo === 20) createPopText("UNSTOPPABLE!", canvas.width/2, canvas.height/2 - 100, '#bc13fe');
+        } 
+        else STATE.combo = 0; 
         
         updateUI();
         if(keyData.isDual) { lasers.push(new Laser(keyData.x - 10*STATE.sf, keyData.y - keyData.h/2, targetEnemy, STATE.combo, -10)); lasers.push(new Laser(keyData.x + 10*STATE.sf, keyData.y - keyData.h/2, targetEnemy, STATE.combo, 10)); } 
@@ -1055,8 +1135,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Boot execution
-loadGameData();
-resizeCanvas();
+window.onload = () => { loadGameData(); resizeCanvas(); };
 
 </script>
 </body>
