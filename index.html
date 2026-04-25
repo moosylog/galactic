@@ -959,22 +959,113 @@ class SwarmEnemy {
 
 class BonusDrone {
     constructor(isRescue = false) {
-        this.isRescue = isRescue; this.color = isRescue ? '#ffea00' : '#00ff66';
+        this.isRescue = isRescue; 
+        // Yellow for rescue drones, Neon Green for EMP drones
+        this.color = isRescue ? '#ffea00' : '#00ff66'; 
+        
         let keys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted);
         this.char = keys.length > 0 ? keys[Math.floor(Math.random() * keys.length)] : 'a';
-        this.y = (100 + Math.random() * 200) * STATE.sf;
-        this.dir = Math.random() > 0.5 ? 1 : -1; this.x = this.dir === 1 ? -50 : canvas.width + 50;
-        this.speed = (150 + Math.random() * 100) * STATE.sf; this.active = true; this.targeted = false;
-    }
-    update(dt) { this.x += this.dir * this.speed * (dt/1000); if ((this.dir === 1 && this.x > canvas.width + 50) || (this.dir === -1 && this.x < -50)) this.active = false; }
-    draw(ctx) {
-        ctx.save(); ctx.translate(this.x, this.y);
-        ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = this.color; ctx.strokeStyle = this.color; ctx.lineWidth = 3 * STATE.sf;
-        ctx.beginPath(); ctx.arc(0, 0, 20 * STATE.sf, 0, Math.PI*2); ctx.fillStyle = `rgba(${this.isRescue?'255,234,0':'0,255,102'},0.2)`; ctx.fill(); ctx.stroke();
         
-        ctx.beginPath(); ctx.arc(0,0, 25*STATE.sf, Date.now()/200, Math.PI + Date.now()/200); ctx.stroke();
+        this.y = (100 + Math.random() * 200) * STATE.sf;
+        this.dir = Math.random() > 0.5 ? 1 : -1; 
+        this.x = this.dir === 1 ? -50 : canvas.width + 50;
+        this.speed = (150 + Math.random() * 100) * STATE.sf; 
+        this.active = true; 
+        this.targeted = false;
+    }
 
-        ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.floor(20 * STATE.sf)}px 'Orbitron'`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(this.char.toUpperCase(), 0, 0);
+    update(dt) { 
+        this.x += this.dir * this.speed * (dt/1000); 
+        // Add a smooth hovering/bobbing motion as it flies across
+        this.y += Math.sin(Date.now() / 300) * 0.5 * STATE.sf;
+        
+        if ((this.dir === 1 && this.x > canvas.width + 50) || (this.dir === -1 && this.x < -50)) {
+            this.active = false; 
+        }
+    }
+
+    draw(ctx) {
+        ctx.save(); 
+        ctx.translate(this.x, this.y);
+        let sizeMod = STATE.sf * 1.5;
+        let now = Date.now();
+
+        ctx.shadowBlur = 25 * STATE.sf; 
+        ctx.shadowColor = this.color; 
+        
+        // 1. Outer Energy Shield (Pulsing Ellipse)
+        let pulse = 0.6 + Math.sin(now / 100) * 0.4;
+        ctx.strokeStyle = `rgba(${this.isRescue ? '255,234,0' : '0,255,102'}, ${pulse})`;
+        ctx.lineWidth = 2 * STATE.sf;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 24*sizeMod, 12*sizeMod, 0, 0, Math.PI*2);
+        ctx.stroke();
+
+        // 2. Inner Metallic Saucer Body (Hexagonal)
+        ctx.shadowBlur = 10 * STATE.sf;
+        ctx.beginPath();
+        ctx.moveTo(-18*sizeMod, 0);
+        ctx.lineTo(-10*sizeMod, -8*sizeMod);
+        ctx.lineTo(10*sizeMod, -8*sizeMod);
+        ctx.lineTo(18*sizeMod, 0);
+        ctx.lineTo(10*sizeMod, 8*sizeMod);
+        ctx.lineTo(-10*sizeMod, 8*sizeMod);
+        ctx.closePath();
+        
+        let hullGrad = ctx.createLinearGradient(0, -8*sizeMod, 0, 8*sizeMod);
+        hullGrad.addColorStop(0, '#333');
+        hullGrad.addColorStop(0.5, '#111');
+        hullGrad.addColorStop(1, '#000');
+        ctx.fillStyle = hullGrad;
+        ctx.fill();
+        
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2 * STATE.sf;
+        ctx.stroke();
+
+        // 3. Spinning Holographic Target Rings
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2 * STATE.sf;
+        ctx.beginPath(); 
+        ctx.arc(0, 0, 16*sizeMod, now/200, Math.PI/2 + now/200); 
+        ctx.stroke();
+        ctx.beginPath(); 
+        ctx.arc(0, 0, 16*sizeMod, Math.PI + now/200, Math.PI*1.5 + now/200); 
+        ctx.stroke();
+
+        // 4. Glowing Core (Holds the letter)
+        ctx.fillStyle = `rgba(${this.isRescue ? '255,234,0' : '0,255,102'}, 0.15)`;
+        ctx.beginPath();
+        ctx.arc(0, 0, 12*sizeMod, 0, Math.PI*2);
+        ctx.fill();
+
+        // 5. Letter/Character
+        ctx.shadowBlur = 15 * STATE.sf;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = '#fff'; 
+        ctx.font = `900 ${Math.floor(18 * sizeMod)}px 'Orbitron'`; 
+        ctx.textAlign = "center"; 
+        ctx.textBaseline = "middle"; 
+        ctx.fillText(this.char.toUpperCase(), 0, 2*STATE.sf);
+        
+        // 6. Directional Engine Thruster Trails
+        ctx.shadowBlur = 15 * STATE.sf;
+        ctx.fillStyle = this.color;
+        let trailPulse = Math.random() * 6 * sizeMod;
+        
+        if(this.dir === 1) {
+            // Moving right, thruster trailing on the left
+            ctx.beginPath();
+            ctx.ellipse(-18*sizeMod - trailPulse/2, 0, 4*sizeMod + trailPulse, 2*sizeMod, 0, 0, Math.PI*2);
+            ctx.fill();
+        } else {
+            // Moving left, thruster trailing on the right
+            ctx.beginPath();
+            ctx.ellipse(18*sizeMod + trailPulse/2, 0, 4*sizeMod + trailPulse, 2*sizeMod, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+
         ctx.restore();
     }
 }
