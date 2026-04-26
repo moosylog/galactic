@@ -29,46 +29,90 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; }
    [2] ESPORTS HUD & BIOMETRICS
    ========================================================================== */
 #hud {
-    position: absolute; top: 0; left: 0; width: 100%; 
+    position: absolute; top: 0; left: 0; width: 100%; height: 45px;
     background: linear-gradient(rgba(0, 5, 15, 0.95), rgba(0,0,0,0));
     border-bottom: 1px solid rgba(0, 243, 255, 0.15);
-    backdrop-filter: blur(5px);
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    padding: 10px 2vw; box-sizing: border-box; z-index: 50; pointer-events: none;
+    backdrop-filter: blur(2px);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 2vw; box-sizing: border-box; z-index: 50; pointer-events: none;
 }
 
-.hud-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.hud-center { display: flex; justify-content: center; gap: 40px; align-items: flex-start; }
-.hud-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.hud-group { display: flex; align-items: center; gap: clamp(15px, 2vw, 30px); }
+.hud-item { display: flex; align-items: baseline; gap: 8px; }
 
-.hud-item { display: flex; align-items: center; gap: 10px; }
-.hud-item-center { display: flex; flex-direction: column; align-items: center; }
+.hud-lbl { font-size: clamp(0.6rem, 1vw, 0.8rem); color: rgba(255,255,255,0.5); letter-spacing: 2px; }
+.hud-val { font-size: clamp(1rem, 1.5vw, 1.4rem); font-family: 'Oxanium', sans-serif; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
-.hud-lbl { font-size: clamp(0.7rem, 1vw, 0.9rem); color: rgba(255,255,255,0.5); letter-spacing: 2px; }
-.hud-val { font-size: clamp(1.2rem, 1.8vw, 1.8rem); font-family: 'Oxanium', sans-serif; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
-
-.highlight-purple { color: var(--neon-purple); text-shadow: 0 0 15px var(--neon-purple); font-size: clamp(1.8rem, 2.5vw, 2.5rem); }
-.highlight-blue { color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue); font-size: clamp(1.8rem, 2.5vw, 2.5rem); }
+.highlight-purple { color: var(--neon-purple); text-shadow: 0 0 10px var(--neon-purple); }
+.highlight-blue { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
 .highlight-green { color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }
 
-.combo { font-size: clamp(1rem, 1.5vw, 1.5rem); font-family: 'Oxanium', sans-serif; color: var(--neon-yellow); text-shadow: 0 0 10px var(--neon-yellow); font-weight: 900;}
+.combo { font-size: clamp(1rem, 1.5vw, 1.2rem); font-family: 'Oxanium', sans-serif; color: var(--neon-yellow); text-shadow: 0 0 8px var(--neon-yellow); font-weight: 900;}
 
-#emp-container { width: 15vw; min-width: 150px; height: 22px; border: 2px solid rgba(0,243,255,0.4); border-radius: 4px; background: rgba(0,0,0,0.7); overflow: hidden; position: relative; box-shadow: 0 0 15px rgba(0,0,0,0.8); transform: skewX(-15deg); }
+#emp-container { width: 12vw; min-width: 120px; height: 18px; border: 2px solid rgba(0,243,255,0.4); border-radius: 4px; background: rgba(0,0,0,0.7); overflow: hidden; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.8); transform: skewX(-15deg); }
 #emp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #5e0085, var(--neon-purple)); box-shadow: 0 0 20px var(--neon-purple); transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-#emp-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 0.8rem; font-weight: bold; color: #fff; letter-spacing: 3px; transform: skewX(15deg); text-shadow: 1px 1px 2px #000;}
+#emp-text { position: absolute; width: 100%; text-align: center; top: 1px; font-size: 0.7rem; font-weight: bold; color: #fff; letter-spacing: 3px; transform: skewX(15deg); text-shadow: 1px 1px 2px #000;}
 .emp-ready { border-color: var(--neon-purple) !important; animation: empPulse 0.4s infinite alternate; }
 @keyframes empPulse { to { box-shadow: 0 0 25px var(--neon-purple), inset 0 0 10px var(--neon-purple); } }
 
-/* UPDATED: Pushed lower so it doesn't overlap the new rigid header */
+/* ==========================================================================
+   [3] HOSTAGE CAVE UI
+   ========================================================================== */
 #hostage-cave {
-    position: absolute; top: 90px; right: 2vw;
-    background: rgba(20, 0, 10, 0.85); border: 2px solid var(--neon-pink); border-radius: 4px;
-    padding: 10px; width: 15vw; min-width: 150px; box-shadow: 0 0 15px rgba(255,0,85,0.4), inset 0 0 10px rgba(0,0,0,0.8);
-    text-align: center; animation: cavePulse 1.5s infinite alternate; z-index: 50;
+    position: absolute; top: 60px; right: 2vw;
+    background: rgba(20, 0, 10, 0.85);
+    border: 2px solid var(--neon-pink);
+    border-radius: 4px;
+    padding: 10px;
+    width: 15vw;
+    min-width: 150px;
+    box-shadow: 0 0 15px rgba(255,0,85,0.4), inset 0 0 10px rgba(0,0,0,0.8);
+    text-align: center;
+    animation: cavePulse 1.5s infinite alternate;
+    z-index: 50;
+}
+@keyframes cavePulse {
+    from { box-shadow: 0 0 10px rgba(255,0,85,0.4), inset 0 0 10px rgba(0,0,0,0.8); }
+    to { box-shadow: 0 0 25px rgba(255,0,85,0.8), inset 0 0 15px rgba(255,0,85,0.2); }
+}
+.cave-title {
+    color: var(--neon-pink);
+    font-family: 'Oxanium', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed rgba(255,0,85,0.4);
+    padding-bottom: 4px;
+}
+#hostage-keys {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.hostage-key {
+    background: #000;
+    border: 1px solid var(--neon-pink);
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-shadow: 0 0 5px #fff;
+    box-shadow: inset 0 0 8px rgba(255,0,85,0.5);
+}
+#practice-progress {
+    color: #fff;
+    font-family: 'Oxanium', sans-serif;
+    font-size: 0.9rem;
+    font-weight: bold;
+    letter-spacing: 1px;
 }
 
 /* ==========================================================================
-   [3] MENUS, END SCREENS & OVERLAYS
+   [4] MENUS, END SCREENS & OVERLAYS
    ========================================================================== */
 .overlay-screen {
     position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(3,3,15,0.9), rgba(0,0,0,0.98)); z-index: 200;
@@ -147,61 +191,3 @@ select:hover, select:focus, textarea:focus { border-color: var(--neon-pink); box
 }
 #boss-alert span { font-size:clamp(1.5rem, 3vw, 3rem); color:#fff; -webkit-text-stroke: 0px; text-shadow: 0 0 20px #fff; letter-spacing: 4px; display: block;}
 @keyframes pulseAlert { from { opacity: 0.6; transform: translate(-50%, -50%) scale(0.95); filter: drop-shadow(0 0 10px red); } to { opacity: 1; transform: translate(-50%, -50%) scale(1.05); filter: drop-shadow(0 0 50px red); } }
-
-
-/* ... KEEP ALL PREVIOUS CSS EXACTLY THE SAME, AND APPEND THIS TO THE BOTTOM ... */
-
-/* ==========================================================================
-   [4] HOSTAGE CAVE UI
-   ========================================================================== */
-#hostage-cave {
-    margin-top: 15px;
-    background: rgba(20, 0, 10, 0.85);
-    border: 2px solid var(--neon-pink);
-    border-radius: 4px;
-    padding: 10px;
-    width: 15vw;
-    min-width: 150px;
-    box-shadow: 0 0 15px rgba(255,0,85,0.4), inset 0 0 10px rgba(0,0,0,0.8);
-    text-align: center;
-    animation: cavePulse 1.5s infinite alternate;
-}
-@keyframes cavePulse {
-    from { box-shadow: 0 0 10px rgba(255,0,85,0.4), inset 0 0 10px rgba(0,0,0,0.8); }
-    to { box-shadow: 0 0 25px rgba(255,0,85,0.8), inset 0 0 15px rgba(255,0,85,0.2); }
-}
-.cave-title {
-    color: var(--neon-pink);
-    font-family: 'Oxanium', sans-serif;
-    font-size: 0.8rem;
-    letter-spacing: 2px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    border-bottom: 1px dashed rgba(255,0,85,0.4);
-    padding-bottom: 4px;
-}
-#hostage-keys {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-.hostage-key {
-    background: #000;
-    border: 1px solid var(--neon-pink);
-    color: #fff;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 1.2rem;
-    font-weight: bold;
-    padding: 5px 10px;
-    border-radius: 4px;
-    text-shadow: 0 0 5px #fff;
-    box-shadow: inset 0 0 8px rgba(255,0,85,0.5);
-}
-#practice-progress {
-    color: #fff;
-    font-family: 'Oxanium', sans-serif;
-    font-size: 0.9rem;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
