@@ -265,7 +265,7 @@ class BossShip {
                 else if (i === this.typedIndex) { ctx.fillStyle = '#fff'; ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = '#fff'; } 
                 else { ctx.fillStyle = '#ffea00'; ctx.shadowBlur = 0; }
                 
-                ctx.fillText(char, startX, 85 * sizeMod);
+                ctx.fillText(char, startX, 55 * sizeMod);
                 startX += cWidth;
                 ctx.shadowBlur = 0;
             }
