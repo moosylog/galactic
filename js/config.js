@@ -30,7 +30,6 @@ const DATA = {
         'SEMI':';','SQT':"'",'COMMA':',','DOT':'.','FSLH':'/','BSLH':'\\','MINUS':'-','EQUAL':'=','LBKT':'[','RBKT':']','SPC':' ', 'SPACE':' ', 'ENTER':'RET', 'BACKSPACE':'BSPC',
         'N1':'1', 'N2':'2', 'N3':'3', 'N4':'4', 'N5':'5', 'N6':'6', 'N7':'7', 'N8':'8', 'N9':'9', 'N0':'0'
     },
-    // FIX: Restored IGN_KEYS to prevent startup crash
     IGN_KEYS: ['ESC','TAB','LSHFT','RSHFT','LCTRL','RCTRL','LALT','RALT','LGUI','RGUI','MO1','MO2','MAGIC','LOWER','RAISE','RET','BSPC','DEL','CAPS','ENTER','BACKSPACE','DELETE'],
     DICTIONARY: []
 };
