@@ -388,9 +388,9 @@ function drawShipHUD(time) {
         
         let wordsMap = {};
         
-        if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) {
-            wordsMap[STATE.bossRef.wordId] = { id: STATE.bossRef.wordId, isBoss: true, word: STATE.bossRef.word, typed: STATE.bossRef.typedIndex, y: STATE.bossRef.y };
-        }
+    //    if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) {
+    //        wordsMap[STATE.bossRef.wordId] = { id: STATE.bossRef.wordId, isBoss: true, word: STATE.bossRef.word, typed: STATE.bossRef.typedIndex, y: STATE.bossRef.y };
+   //     }
         
         enemies.forEach(e => {
             if (e && !e.isBoss && !e.isPractice && e.word) {
@@ -615,11 +615,16 @@ function damagePlayer(amt) {
         STATE.highScores.sort((a,b) => b.score - a.score); STATE.highScores = STATE.highScores.slice(0, 5);
         saveGameData(); renderScoreboard();
         
-        if (UI.endScore) {
-            UI.endScore.textContent = String(STATE.score).padStart(6, '0'); 
-            UI.endWave.textContent = `SECTOR ${STATE.sector} (WAVE ${STATE.wave})`;
-            UI.endCombo.textContent = STATE.maxCombo + "x"; 
-            if(UI.endWpm) UI.endWpm.textContent = STATE.currentWPM;
+if (UI.endScore) {
+    UI.endScore.textContent = String(STATE.score).padStart(6, '0'); 
+    UI.endWave.textContent = `SECTOR ${STATE.sector} (WAVE ${STATE.wave})`;
+    
+    // CHANGE THIS: Add the check for endCombo
+    if (UI.endCombo) {
+        UI.endCombo.textContent = STATE.maxCombo + "x"; 
+    }
+    
+    if(UI.endWpm) UI.endWpm.textContent = STATE.currentWPM;
             
             let accPct = STATE.totalKeystrokes > 0 ? Math.floor((STATE.correctKeystrokes / STATE.totalKeystrokes) * 100) : 100;
             UI.endAcc.textContent = accPct + "%";
