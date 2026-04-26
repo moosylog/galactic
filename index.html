@@ -15,24 +15,18 @@
     <div class="crt-overlay"></div>
 
     <div id="hud">
-        <div class="hud-left">
+        <div class="hud-group">
             <div class="hud-item"><span class="hud-lbl">SCORE</span><span class="hud-val" id="ui-score">000000</span></div>
             <div class="hud-item"><span class="hud-lbl">WAVE</span><span class="hud-val" id="ui-wave">1</span></div>
             <div class="combo" id="ui-combo">0x COMBO</div>
         </div>
         
-        <div class="hud-center">
-            <div class="hud-item-center">
-                <span class="hud-lbl">WPM</span>
-                <span class="hud-val highlight-purple" id="ui-wpm">000</span>
-            </div>
-            <div class="hud-item-center">
-                <span class="hud-lbl">ACCURACY</span>
-                <span class="hud-val highlight-blue" id="ui-acc">100%</span>
-            </div>
+        <div class="hud-group">
+            <div class="hud-item"><span class="hud-lbl">WPM</span><span class="hud-val highlight-purple" id="ui-wpm">000</span></div>
+            <div class="hud-item"><span class="hud-lbl">ACC</span><span class="hud-val highlight-blue" id="ui-acc">100%</span></div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-group">
             <div class="hud-item"><span class="hud-lbl">HULL</span><span class="hud-val highlight-green" id="ui-health">100%</span></div>
             <div id="emp-container">
                 <div id="emp-fill"></div>
@@ -119,13 +113,14 @@
         <div class="menu-box end-box" style="max-width: 1000px;">
             <h1 style="color: transparent; -webkit-text-stroke: 2px var(--neon-pink); text-shadow: 0 0 30px var(--neon-pink);">SYSTEM<br><span style="-webkit-text-stroke:0px; color:#fff; font-size:0.6em;">CRITICAL FAILURE</span></h1>
             
-<div class="end-stats">
-    <div>FINAL SCORE <span id="end-score">000000</span></div>
-    <div>SURVIVAL <span id="end-wave">SECTOR 1 (WAVE 0)</span></div>
-    <div>AVERAGE WPM <span id="end-wpm" style="color:var(--neon-purple)">0</span></div>
-    <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div> 
-    <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
-</div>
+            <div class="end-stats">
+                <div>FINAL SCORE <span id="end-score">000000</span></div>
+                <div>SURVIVAL <span id="end-wave" style="font-size: 1.6rem;">SECTOR 1 (WAVE 0)</span></div>
+                <div>AVERAGE WPM <span id="end-wpm" style="color:var(--neon-purple)">0</span></div>
+                <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div>
+                <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
+            </div>
+
             <div id="heatmap-container">
                 <div class="scoreboard-title" style="margin-top: 15px; margin-bottom: 10px;">PHYSICAL BIOMETRIC HEATMAP</div>
                 <div style="color: #888; font-size: 0.8rem; margin-bottom: 10px; font-family: 'Share Tech Mono';">
