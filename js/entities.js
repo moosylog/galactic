@@ -131,7 +131,9 @@ class BossShip {
             this.state = 'release_anim';
             this.releaseIndex = 0;
             AudioFX.rescue();
-            createPopText("SHIELD FRACTURED! RELEASING KEYS!", canvas.width/2, this.y - (90*STATE.sf), '#00ff66');
+    //        createPopText("SHIELD FRACTURED! RELEASING KEYS!", canvas.width/2, this.y - (90*STATE.sf), '#00ff66');
+		// Passed '0.006' so the text stays on screen much longer
+            createPopText("SHIELD FRACTURED! RELEASING KEYS!", canvas.width/2, this.y - (90*STATE.sf), '#00ff66', 0.006);	
             return;
         }
         let pWord = STATE.hostages.practiceWords[STATE.hostages.progress];
@@ -211,7 +213,7 @@ class BossShip {
         ctx.strokeStyle = 'var(--neon-purple)'; ctx.lineWidth = 3 * STATE.sf;
         
         ctx.beginPath();
-        ctx.moveTo(0, -25*sizeMod);           
+        ctx.moveTo(0, -25*sizeMod);            
         ctx.lineTo(25*sizeMod, -12*sizeMod);  
         ctx.lineTo(45*sizeMod, 15*sizeMod);   
         ctx.lineTo(22*sizeMod, 8*sizeMod);    
@@ -250,7 +252,6 @@ class BossShip {
         ctx.fillStyle = '#e0ffff';
         ctx.beginPath(); ctx.ellipse(0, 15*sizeMod, 6*sizeMod, 3*sizeMod, 0, 0, Math.PI*2); ctx.fill();
 
-        // ALWAYS draw boss text natively under the shield
         if (this.state === 'idle' || this.state === 'enter') {
             ctx.shadowBlur = 0; 
             let fSize = Math.floor(35 * STATE.sf);
@@ -362,7 +363,6 @@ class PracticeMissile {
             ctx.beginPath(); ctx.arc(0, 0, 25 * sizeMod, 0, Math.PI*2); ctx.stroke();
         }
 
-        // ALWAYS draw text natively
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
         let fSize = Math.max(16, Math.floor(22 * STATE.sf));
         ctx.font = `800 ${fSize}px 'Oxanium'`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -381,7 +381,8 @@ class SwarmEnemy {
         
         let spacing = 70 * STATE.sf; let wordWidth = totalInWord * spacing;
         this.formX = (canvas.width/2) - (wordWidth/2) + (index * spacing);
-        this.formY = (160 + (Math.random() * 100)) * STATE.sf;
+        
+        this.formY = (120 + (Math.random() * 80)) * STATE.sf;
         
         this.active = true; this.targeted = false; 
         this.color = (this.targetNode.color === 'var(--neon-blue)') ? '#00f3ff' : '#ff0055';
@@ -389,7 +390,7 @@ class SwarmEnemy {
 
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
-        let waveScale = Math.min(0.4, STATE.wave * 0.02); 
+        let waveScale = Math.min(0.3, STATE.wave * 0.015); 
         let baseSpeed = diff.baseSpeed + waveScale;
 
         if(this.state === 'enter') {
@@ -400,9 +401,16 @@ class SwarmEnemy {
             if(Math.abs(dx) < 5 && Math.abs(dy) < 5) this.state = 'hover';
         }
         else if (this.state === 'hover') {
+            this.formY += 0.2 * STATE.sf * (dt/16);
             this.x = this.formX + Math.sin(time/500 + this.index) * (20 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
+            
             let diveChance = 0.0005 + (STATE.wave * 0.0002);
+            
+            if (enemies.length <= 8) {
+                diveChance += 0.01; 
+            }
+            
             if(Math.random() < diveChance) this.state = 'dive';
         }
         else if (this.state === 'dive') {
@@ -457,7 +465,6 @@ class SwarmEnemy {
             ctx.beginPath(); ctx.moveTo(0, 30*sizeMod); ctx.lineTo(0, 20*sizeMod); ctx.stroke();
         }
 
-        // ALWAYS draw text natively
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
         let fSize = Math.max(16, Math.floor(22 * STATE.sf));
         ctx.font = `800 ${fSize}px 'Oxanium'`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -502,7 +509,6 @@ class BonusDrone {
         ctx.fillStyle = `rgba(${this.isRescue ? '255,234,0' : '0,255,102'}, 0.15)`;
         ctx.beginPath(); ctx.arc(0, 0, 12*sizeMod, 0, Math.PI*2); ctx.fill();
         
-        // ALWAYS draw text natively
         ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color; ctx.fillStyle = '#fff'; 
         ctx.font = `800 ${Math.floor(18 * sizeMod)}px 'Oxanium'`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; 
         ctx.fillText(this.char.toUpperCase(), 0, 2*STATE.sf);
@@ -544,11 +550,18 @@ class Laser {
             }
             if(this.target.isBoss) {
                 createExplosion(this.x, this.y, '#fff'); 
-                if (this.target.state === 'idle' || this.target.state === 'enter') {
-                    this.target.hp--; 
-                    if (this.target.hp <= 0) {
-                        this.target.active = false; STATE.bossRef = null;
-                        createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
+                this.target.hp--; 
+                if (this.target.hp <= 0) {
+                    this.target.active = false; STATE.bossRef = null;
+                    createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
+                    
+                    if (this.target.capturedKeys && this.target.capturedKeys.length > 0) {
+                        this.target.capturedKeys.forEach(char => {
+                            if (STATE.activeKeys[char]) STATE.activeKeys[char].isAbducted = false;
+                        });
+                        STATE.hostages.active = false;
+                        if(UI.hostageCave) UI.hostageCave.style.display = 'none';
+                        enemies = enemies.filter(en => !en.isPractice);
                     }
                 }
             } else {
