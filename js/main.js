@@ -43,7 +43,7 @@ let STATE = {
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
-    taFadeOutTime: 0, // NEW: Used to fade out the assistant if it's turned off globally
+    taFadeOutTime: 0, 
     
     startTime: 0, totalKeystrokes: 0, correctKeystrokes: 0, currentWPM: 0, wpmMultiplier: 1.0, targetMultiplier: 1.0,
     scoreMultiplier: 1.0, waveTotal: 0, waveCorrect: 0, recentErrors: [], weaponJamTimer: 0,
@@ -372,25 +372,19 @@ function drawShipHUD(time) {
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; let fontSize = Math.max(14, k.h * 0.5); ctx.font = `bold ${fontSize}px 'Share Tech Mono'`; ctx.fillText(char.toUpperCase(), k.x, k.y + (2 * STATE.sf));
     }
     
-    // TEXT ASSISTANT LOGIC (Fade out smoothly if turned off)
     let now = performance.now();
     let taOpacity = 0;
     if (STATE.textAssistantEnabled) {
         taOpacity = 1.0;
     } else {
         let remain = STATE.taFadeOutTime - now;
-        if (remain > 0) taOpacity = Math.min(1.0, remain / 1000); // Fades out over the last 1 second of the timer
+        if (remain > 0) taOpacity = Math.min(1.0, remain / 1000); 
     }
 
     if (taOpacity > 0 && !STATE.hostages.active && !STATE.isHyperspace) {
         ctx.save();
         ctx.globalAlpha = taOpacity;
-        
         let wordsMap = {};
-        
-    //    if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) {
-    //        wordsMap[STATE.bossRef.wordId] = { id: STATE.bossRef.wordId, isBoss: true, word: STATE.bossRef.word, typed: STATE.bossRef.typedIndex, y: STATE.bossRef.y };
-   //     }
         
         enemies.forEach(e => {
             if (e && !e.isBoss && !e.isPractice && e.word) {
@@ -421,7 +415,6 @@ function drawShipHUD(time) {
             let next = wordList[1];
 
             let anchorY = canvas.height - maxHudHeight - (40 * STATE.sf);
-            
             let fSize = Math.floor(45 * STATE.sf); 
             ctx.font = `800 ${fSize}px 'Oxanium'`;
             
@@ -551,21 +544,24 @@ function spawnWave() {
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
         let word = getWordForWave(STATE.wave, true); 
-        
         let wordId = "B" + Date.now();
         enemies.push(new BossShip(word, wordId));
-        
         createPopText("BOSS INCOMING! DEFEND YOUR KEYS!", canvas.width/2, canvas.height/2, '#ffea00');
-        STATE.taFadeOutTime = performance.now() + 5000; // Show Text Assistant for 5s on Boss
+        STATE.taFadeOutTime = performance.now() + 5000; 
     } else {
         createPopText(`WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, '#00f3ff');
         
-        let baseWords = Math.min(4, 1 + Math.floor(STATE.wave / 4)); 
-        let wpmBonus = Math.floor(STATE.currentWPM / 40); 
-        let numWords = Math.min(8, baseWords + wpmBonus); 
+        // TOURNAMENT PACING: Tighter board, less visual clutter
+        // Starts at 1 word, adds 1 word every 4 waves. Base maximum of 3 words.
+        let baseWords = Math.min(3, 1 + Math.floor((STATE.wave - 1) / 4)); 
         
-        STATE.taFadeOutTime = performance.now() + 2000 + (numWords * 500); // Dynamically keep UI alive longer for bigger waves
+        // Only give elite typists a maximum of 1 extra word to prevent screen flooding
+        let wpmBonus = STATE.currentWPM >= 90 ? 1 : 0; 
         
+        // Absolute hard cap of 4 words on screen at once
+        let numWords = Math.min(4, baseWords + wpmBonus); 
+        
+        STATE.taFadeOutTime = performance.now() + 2000 + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
             let word = getWordForWave(STATE.wave, false);
             let wordId = "W" + Date.now() + w;
@@ -615,23 +611,17 @@ function damagePlayer(amt) {
         STATE.highScores.sort((a,b) => b.score - a.score); STATE.highScores = STATE.highScores.slice(0, 5);
         saveGameData(); renderScoreboard();
         
-if (UI.endScore) {
-    UI.endScore.textContent = String(STATE.score).padStart(6, '0'); 
-    UI.endWave.textContent = `SECTOR ${STATE.sector} (WAVE ${STATE.wave})`;
-    
-    // CHANGE THIS: Add the check for endCombo
-    if (UI.endCombo) {
-        UI.endCombo.textContent = STATE.maxCombo + "x"; 
-    }
-    
-    if(UI.endWpm) UI.endWpm.textContent = STATE.currentWPM;
+        if (UI.endScore) {
+            UI.endScore.textContent = String(STATE.score).padStart(6, '0'); 
+            UI.endWave.textContent = `SECTOR ${STATE.sector} (WAVE ${STATE.wave})`;
+            if (UI.endCombo) UI.endCombo.textContent = STATE.maxCombo + "x"; 
+            if (UI.endWpm) UI.endWpm.textContent = STATE.currentWPM;
             
             let accPct = STATE.totalKeystrokes > 0 ? Math.floor((STATE.correctKeystrokes / STATE.totalKeystrokes) * 100) : 100;
             UI.endAcc.textContent = accPct + "%";
         }
         
         drawHeatmap(); 
-        
         if (UI.endScreen) UI.endScreen.style.display = 'flex'; 
     }
 }
@@ -648,6 +638,7 @@ window.addEventListener('resize', resizeCanvas);
 
 function gameLoop(time) {
     if(!STATE.active) return;
+    
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
 
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
@@ -656,7 +647,7 @@ function gameLoop(time) {
     bgCtx.fillStyle = spaceGrad; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
     let depthMod = 1 + (STATE.combo * 0.02);
-    let speedMult = STATE.isHyperspace ? 15 : 1;
+    let speedMult = STATE.isHyperspace ? 25 : 1; 
 
     bgCtx.lineCap = 'round'; ctx.shadowBlur = 0;
     for(let s of stars) { 
@@ -678,16 +669,16 @@ function gameLoop(time) {
             x: Math.random() * canvas.width, y: -100,
             vx: (Math.random() - 0.2) * 20 * STATE.sf,
             vy: (15 + Math.random() * 10) * STATE.sf,
-            life: 1.0, color: Math.random() > 0.5 ? 'var(--neon-blue)' : 'var(--neon-yellow)'
+            lineSize: 1.0, color: Math.random() > 0.5 ? 'var(--neon-blue)' : 'var(--neon-yellow)'
         };
     }
     if (fallingStar) {
-        fallingStar.x += fallingStar.vx * (dt/16); fallingStar.y += fallingStar.vy * (dt/16); fallingStar.life -= 0.01 * (dt/16);
+        fallingStar.x += fallingStar.vx * (dt/16); fallingStar.y += fallingStar.vy * (dt/16); fallingStar.lineSize -= 0.01 * (dt/16);
         bgCtx.save(); bgCtx.strokeStyle = fallingStar.color; bgCtx.lineWidth = 3 * STATE.sf;
-        bgCtx.globalAlpha = fallingStar.life; bgCtx.shadowBlur = 15 * STATE.sf; bgCtx.shadowColor = fallingStar.color;
+        bgCtx.globalAlpha = Math.max(0, fallingStar.lineSize); bgCtx.shadowBlur = 15 * STATE.sf; bgCtx.shadowColor = fallingStar.color;
         bgCtx.beginPath(); bgCtx.moveTo(fallingStar.x, fallingStar.y); bgCtx.lineTo(fallingStar.x - fallingStar.vx * 3, fallingStar.y - fallingStar.vy * 3);
         bgCtx.stroke(); bgCtx.restore();
-        if (fallingStar.life <= 0 || fallingStar.y > canvas.height + 100) fallingStar = null;
+        if (fallingStar.lineSize <= 0 || fallingStar.y > canvas.height + 100) fallingStar = null;
     }
 
     if (bonusDrones.length === 0 && !STATE.isHyperspace && Math.random() < 0.002) {
@@ -729,7 +720,7 @@ function gameLoop(time) {
                 STATE.isHyperspace = false;
                 STATE.wave++;
                 spawnWave();
-            }, 5000); 
+            }, 2500); 
         } else if (!STATE.isHyperspace) {
             STATE.wave++; 
             setTimeout(spawnWave, 1500);
@@ -797,7 +788,6 @@ function startGame() {
     STATE.recentErrors = []; STATE.weaponJamTimer = 0;
     
     let taCheckbox = document.getElementById('chk-textassistant');
-    // Default to false if missing
     STATE.textAssistantEnabled = taCheckbox ? taCheckbox.checked : false; 
     STATE.taFadeOutTime = 0;
     
@@ -847,7 +837,6 @@ document.addEventListener('keydown', (e) => {
     STATE.waveTotal++;
 
     let targetEnemy = null; let seqMatched = false;
-    
     let hitDrone = bonusDrones.find(b => b.char === inputChar && b.active && !b.targeted);
     
     if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle') {
@@ -951,7 +940,6 @@ document.addEventListener('keydown', (e) => {
         if(!STATE.bioTracker[inputChar]) STATE.bioTracker[inputChar] = { presses:0, misses:0, latencies:[] };
         STATE.bioTracker[inputChar].misses++;
 
-        // PRO FIX: Strict null check to prevent toLowerCase crash if boss is animating death
         if (STATE.bossRef && STATE.bossRef.state === 'idle' && STATE.bossRef.word) {
             let bossWord = STATE.bossRef.word;
             let typedIx = STATE.bossRef.typedIndex;
