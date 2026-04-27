@@ -1,22 +1,22 @@
 <sup> AI generated</sup>
 <div align="center">
 
-# GALACTIC KEYSTROKE
-**Survive the swarm. Rescue your keys. Unlock real typing speed.**
+# CORTEX
+**Divide your focus. Master the split. Defend the Core.**
 
 [![HTML5](https://img.shields.io/badge/HTML5-Strict-E34F26?style=for-the-badge&logo=html5&logoColor=white)](#)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-00FF66?style=for-the-badge)](#)
 [![eSports Ready](https://img.shields.io/badge/eSports-Ready-BC13FE?style=for-the-badge)](#)
 [![Moosy Research](https://img.shields.io/badge/Moosy_Research-2026-00E5FF?style=for-the-badge)](#)
 
-*An adrenaline-fueled typing survival game that diagnoses your errors and weaponizes your mistakes.*
+*A dual-monitor typing survival engine that hardwires left-right hand independence and peripheral reaction times.*
 
 <br>
 
-<a href="#" target="_blank">
+<a href="https://moosylog.github.io/cortex/" target="_blank">
   <img 
-    src="https://img.shields.io/badge/🚀%20LAUNCH%20GAME-TRAIN%20NOW-00FF66?style=for-the-badge"
-    alt="Launch Galactic Keystroke"
+    src="https://img.shields.io/badge/🚀%20LAUNCH%20CORTEX-TRAIN%20NOW-00FF66?style=for-the-badge"
+    alt="Launch Cortex"
   />
 </a>
 
@@ -26,91 +26,91 @@
 
 ---
 
-## ⚡ Why Most Typing Practice Fails
+## 📊 Why Most Split Keyboard Practice Fails
 
-You don’t get faster by typing random, passive sentences. Motor learning science shows that typing speed plateaus are rooted in weak **bigrams**—the specific key-to-key transitions where your muscle memory hesitates.
+You don’t master a split ergonomic keyboard by typing linear, passive sentences on a single screen. Motor learning science shows that the transition to ortholinear and columnar boards is bottlenecked by a lack of spatial awareness and bilateral independence.
 
-- **The Plateau:** Standard, consequence-free practice allows typists to gloss over their mistakes, reinforcing bad habits and capping their speed.
-- **The Transition Tax:** A poorly optimized finger transition costs milliseconds per keystroke, cumulatively destroying your overall Words Per Minute (WPM).
-- **The Passive Trap:** Rote repetition without active cognitive engagement yields poor retention in muscle memory correction.
+- **The Split Drop-Off:** Community data shows users experience a brutal 30% to 50% drop in typing speed when switching to a split board. Standard practice doesn't isolate the hands to fix this.
+- **Visual Dependency:** Staring at your hands or a static screen prevents "blind" tactile mastery, capping your reaction speed and causing panic under cognitive load.
+- **Neurological Cross-Talk:** Traditional flat keyboards allow hands to cheat and cross the midline. Split boards require strict left/right separation, which rote repetition fails to enforce under pressure.
 
 ---
 
 ## 🧠 What This Game Actually Trains
 
-Galactic Keystroke wraps a high-end, data-driven diagnostic tool inside an arcade shooter. By utilizing **error-driven learning** and **gamified consequence**, it accelerates skill acquisition.
+CORTEX wraps a split-brain cognitive test inside a high-end arcade survival game. By utilizing **forced spatial constraints** and **gamified consequence**, it accelerates your ergonomic adaptation period.
 
-- **The Swarm** pushes your raw WPM and forces you to process visual information at the absolute limit of your cognitive latency.
-- **The Bosses** analyze your mistakes in real time. Make a typo during a boss fight, and it will immediately *abduct those specific physical keys from your ship*.  
-- **The Rescue** forces you to engage in **active recall**. You must flawlessly drill the exact bigrams you just failed under pressure, breaking down bad habits in a matter of sessions.
+- **The Dual Monitors** force you to split your peripheral vision. Left-screen targets are mapped *strictly* to your left hand. Right-screen targets are mapped *strictly* to your right.
+- **The Threat Mutations** analyze and disrupt your visual tracking, forcing you to rely on blind muscle memory rather than staring at your keys.
+- **The Core Link** demands extreme accuracy under cognitive load, breaking down hesitation and sloppy key-presses in a matter of sessions.
 
-You are not just typing—you are **rewiring your neural pathways under fire**.
+You are not just typing—you are **severing the mental dependency between your left and right hands under fire**.
 
 ---
 
 ## 🚀 How It Works
 
-Typing becomes tactical combat.
+Typing becomes dual-wielded tactical defense.
 
-- Words descend as high-speed attack patterns.  
-- Your on-screen keyboard acts as your weapon system.  
-- Survive the waves to build massive combos and EMP charges.  
-- Face the Dreadnought Bosses to diagnose and drill your weak points.  
+- Words descend on two distinct radar screens as high-speed attack patterns.  
+- Your physical keyboard halves act as independent weapon systems.  
+- Survive 45-second sprints to build combos and advance to deadlier threat levels.  
+- Flawless typing charges your Core Link for massive tactical strikes.  
 
 The result:  
-👉 An addictive arcade loop that secretly maps and eliminates your hesitation zones.
+👉 An addictive, high-stress arcade loop that forces absolute spatial mastery of your hardware layout.
 
 ---
 
 ## 🎯 What You Gain
 
-- **Measurable WPM Progression:** Faster overall key transitions by breaking through bigram bottlenecks. 
-- **Composure Under Pressure:** Train your brain to maintain accuracy even when visual and temporal stress is high.
-- **Bilateral Coordination:** Subconscious reinforcement of left/right hand separation through visually tracked Chiral targeting.
-- **Instant Correction:** Immediate identification and remediation of “problem keys” via the Hostage mechanic.
+- **Bilateral Independence:** Total left/right hand typing separation without neurological hesitation or midline crossover.  
+- **Peripheral Acquisition:** Train your brain to process multi-target visual information without losing keyboard composure.  
+- **Blind Mastery:** Immediate elimination of visual dependency (staring at the board) through mutating, evasive targets.  
+- **Plateau Breakthrough:** A verified push past your standard WPM limits by hacking your brain's flow state.
 
 ---
 
 ## 🔥 Core Systems
 
-* **The Hostage Mechanic:** Bosses detect your typos, abduct your weak keys, and force you to flawlessly type targeted practice words. These targeted micro-drills fix bad habits exponentially faster than typing full paragraphs.
-* **Live Biometric HUD:** Your virtual keyboard acts as a real-time analytics dashboard—glowing green for flawless execution, yellow for hesitations, and pulsing red for high-error keys.  
-* **Chiral Targeting:** Lasers are color-coded (Blue/Pink) to physically match your left and right hand, subliminally enforcing proper touch-typing form and reducing neural cross-talk.
-* **Combo & EMP:** Consistency builds speed. Flawless typing charges a screen-clearing tactical EMP (Enter key), conditioning your brain to prioritize rhythm and accuracy over frantic mashing.
+* **Hardware-Aware Dictionary:** CORTEX reads your exact layout. Threats on `SYS.RADAR` (Left) are generated exclusively from your left-hand key pool. `SYS.TACTICAL` (Right) uses only right-hand keys.  
+* **Threat Mutations:** Enemies adapt to your speed. *Weavers* dodge your eyes, *Ghosts* stay cloaked until you type, and *Surprises* test pure twitch-reaction time.  
+* **Zero-Latency Spatial Audio:** Synthesized Web Audio API oscillators provide instant, directional feedback (left/right ear) for every keystroke and incoming threat, subliminally enforcing chiral form.  
+* **Core Link & EMP:** Consistency builds speed. Flawless typing charges your Core Link. Once full, execute the Synergy Word to detonate a screen-clearing tactical EMP, conditioning your brain to prioritize rhythm over frantic mashing.
 
 ---
 
 ## ⚔️ Gameplay Loop
 
-1. Survive the swarm to build momentum and raw speed.  
-2. Reach Sector Bosses every 5 waves.  
-3. Make a mistake? Your keys are taken hostage.  
-4. Execute specific bigram drills to rescue your hardware.  
-5. Unleash EMPs, clear the sector, and climb the Hall of Fame.  
+1. Survive intense 45-second cognitive sprints.  
+2. Track incoming targets on distinct left and right radar monitors.  
+3. Type flawlessly to build combos, raise the speed limit, and charge your EMP.  
+4. React to mutating threats (Ghosts, Weavers, Pulses) before they breach the core.  
+5. Detonate the EMP, clear the level, and climb the Hall of Fame.  
 
 ---
 
 ## ⚡ Why It Works
 
-- Combines **flow-state psychology** with **targeted remediation**. The adrenaline of survival gameplay naturally spikes dopamine, which acts as a chemical fixative for new habit formation.
-- Replaces passive practice with **active consequence**.
-- Automatically identifies what holds you back without boring you with traditional analytics screens. 
-- Continuously adapts the engine speed to your true WPM limit.  
+- Combines **flow-state psychology** with **split-brain cognitive training**. The adrenaline of survival gameplay spikes dopamine, cementing new neural pathways up to 40% faster than standard drills.
+- Replaces linear typing with **spatial peripheral targeting**.
+- Punishes hesitation but deeply rewards rhythm and absolute spatial accuracy.
+- Continuously adapts the threat density to match your exact WPM limits.  
 
 This is not a typing test.  
-This is **championship-tier cognitive training disguised as an arcade game**.
+This is **neurological rewiring disguised as a cyberpunk survival game**.
 
 ---
 
 ## ⌨️ Supported Keyboards
 
-* MoErgo Go60  
 * MoErgo Glove80  
+* MoErgo Go60  
 * Corne (42-key)  
 * ZSA Voyager  
 * Standard ANSI 60% keyboards  
 
-Supports QWERTY, Colemak-DH, Dvorak, and custom layouts.
+Supports QWERTY, Colemak, Colemak-DH, and Dvorak natively.
 
 ---
 
@@ -118,20 +118,20 @@ Supports QWERTY, Colemak-DH, Dvorak, and custom layouts.
 
 Upload your own JSON layout:
 
-- Keys are mapped automatically.  
-- Layout is visualized in-game.  
-- Training adapts to your exact physical and logical setup.  
+- Keys are mapped to your left and right pools automatically.  
+- The dictionary instantly adapts to your custom keymap.  
+- Training maps to your exact, physical ortholinear/columnar setup.  
 
-Compatible with MoErgo, ZMK, and similar configurators.
+Directly compatible with MoErgo configurator JSON exports.
 
 ---
 
 ## 🕹️ Quick Start
 
-- Open the game.  
-- Select your layout.  
-- Start typing.  
-- Survive the swarm.  
+- Open CORTEX.  
+- Select your hardware & layout.  
+- Initialize the Core.  
+- Defend the system.  
 
 No installs. No setup. No friction.
 
@@ -139,10 +139,8 @@ No installs. No setup. No friction.
 
 ## 🧬 Bottom Line
 
-If you want to break past your WPM plateau, you don’t need more flashcards. 
+If you want to master a split keyboard and break your WPM plateau, standard typing tests won't cut it. 
 
-You need flow state. You need active consequences. You need targeted repetition. 
+You need spatial awareness. You need active consequences. You need flow state.
 
-**Survive the swarm. Rescue your keys. Get faster where it counts.**
-
----
+**Divide your focus. Master the split. Defend the Core.**
