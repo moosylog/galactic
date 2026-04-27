@@ -1,4 +1,4 @@
-LLM generated:
+<sup> AI generated</sup>
 <div align="center">
 
 # GALACTIC KEYSTROKE
