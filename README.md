@@ -8,7 +8,7 @@
 [![eSports Ready](https://img.shields.io/badge/eSports-Ready-BC13FE?style=for-the-badge)](#)
 [![Moosy Research](https://img.shields.io/badge/Moosy_Research-2026-00E5FF?style=for-the-badge)](#)
 
-*Galactic Keystroke is a retro arcade typing game designed to help you practice your keyboard layout while defending against falling alien swarms.*
+*Galactic Keystroke is a neo-retro arcade typing defense game designed to push your speed, accuracy, and keyboard mastery to competitive levels.*
 
 <br>
 
@@ -27,24 +27,32 @@
 
 ## 🌐 Overview
 
-Galactic Keystroke is not a regular typing test. It is an **arcade defense game** built specifically to help you master split ergonomic keyboards and different key layouts. 
+Galactic Keystroke is not a traditional typing test—it is a **high-intensity arcade defense system** engineered to train elite touch-typing mechanics.
 
-Instead of typing normal sentences, you must:
-- Defend your keyboard from falling words and letters.
-- Type quickly to fire lasers from your digital keys to destroy the enemies.
-- Improve your accuracy to survive harder waves and boss fights.
+At its core is the **Chiral Swarm system**:
+- Your keyboard becomes a live combat interface.
+- Incoming alien swarms are words that must be typed with precision.
+- Your performance directly controls survival, firepower, and progression.
 
-It is built as a single HTML file that runs directly in your browser. No installation, no setup tools, and no extra downloads—just open and play.
+Your objective is to:
+- Survive endless hyperspace sectors.
+- Maintain high WPM and accuracy multipliers.
+- Identify and eliminate your weakest typing patterns.
+- Climb the competitive leaderboard through consistency and skill.
+
+Built as a single HTML file, the game runs instantly in your browser—no installs, no dependencies, no friction.
 
 ---
 
 ## 🚀 Key Features
 
-* **Biometric Weakness Tracking:** The game studies how you type. It finds the keys you are slow with or make mistakes on, and creates custom challenges based on your weakest links.
-* **Boss Fights & Abductions:** Every third wave is a Boss Wave. Bosses will try to use a tractor beam to steal your keys. You must defeat them to rescue your keys and unlock "Dual Fire" lasers.
-* **Combo System & EMP:** Type without mistakes to build your Combo multiplier. Hitting Bonus Drones charges your EMP. Once full, press the Spacebar to unleash a massive blast.
-* **Built-in Scoreboard:** Your top 5 highest scores are automatically saved in your browser so you can track your progress.
-* **Immersive Arcade Feel:** Features a glowing neon style, screen shake effects, and retro sound effects to make typing practice feel like a real game.
+* **Biometric Weakness Tracking:** Dynamically analyzes your typing patterns and generates targeted challenges based on your weakest keys and transitions.
+* **Chiral Combat System:** Left-hand (blue) and right-hand (pink) plasma fire reflects true keyboard input, reinforcing muscle memory.
+* **Boss Fights & Key Abductions:** Every 5 waves introduces a Boss Ship that can capture your keys—forcing precision recovery gameplay.
+* **Combo System & EMP Weapon:** Maintain flawless streaks to build multipliers and charge a screen-clearing EMP blast.
+* **Adaptive Difficulty Scaling:** The better you perform, the more aggressive and precise the swarm becomes.
+* **Persistent Scoreboard:** Your top scores are stored locally to track long-term improvement.
+* **Immersive Arcade Feedback:** Neon visuals, impact effects, and responsive feedback loops make practice feel like competition.
 
 ---
 
@@ -54,35 +62,55 @@ It is built as a single HTML file that runs directly in your browser. No install
 * MoErgo Glove80  
 * Corne (42-key)  
 * ZSA Voyager  
-* Standard ANSI 60% keyboards
+* Standard ANSI 60% keyboards  
 
-*You can also select different built-in layouts like QWERTY, Colemak-DH, and Dvorak.*
+*Supports multiple layouts including QWERTY, Colemak-DH, and Dvorak.*
 
 ---
 
 ### 📁 Custom Keyboard Setup
 
 Upload your own JSON layout file in the setup menu. The game will automatically:
-- Read your custom key layout.  
-- Map your keys correctly on the screen.  
-- Adjust the gameplay to match your unique keyboard.  
 
-It works with layout files from MoErgo, ZMK, and other custom configurators. No manual setup needed.
+- Parse your custom layout  
+- Map keys to the on-screen grid  
+- Align gameplay with your physical keyboard  
+
+Compatible with MoErgo, ZMK, and other custom configurators—no manual remapping required.
 
 ---
 
 ## 🕹️ How to Play
 
-1. Watch the falling words at the top of the screen.
-2. Type the letters exactly as they appear to fire lasers from your keyboard.
-3. Destroy the words before they hit the bottom line, or your ship will take damage.
-4. Do not make mistakes, or you will lose your combo.
-5. Press the Spacebar when your EMP bar is full for a massive attack.
+1. Track incoming swarm words at the top of the screen.  
+2. Type each word accurately to fire plasma from corresponding keys.  
+3. Destroy enemies before they breach your defense line.  
+4. Maintain accuracy to preserve your combo multiplier.  
+5. Deploy your EMP (Enter key) when fully charged to clear the screen.  
 
 ---
 
 ## ⚠️ Enemy Types
 
-* **Standard Swarm:** Normal words that fall toward your keys.  
-* **Bonus Drones:** Fast-moving green targets that fly across the screen. Destroy them for extra points and EMP energy.
-* **Boss Anomalies:** Large enemies made of your weakest letters. They will stop and try to steal your keys.
+* **Swarm Squadrons:** Core enemy units—words that descend and must be typed sequentially.  
+* **Bonus Drones:** Fast-moving targets that reward EMP charge or key recovery when destroyed.  
+* **Boss Ship:** A heavy dreadnought appearing every 5 waves. Activates key abduction on mistakes.  
+* **Practice Missiles:** Precision challenges launched while keys are captured—type flawlessly to reclaim them.  
+
+---
+
+## 🧠 Core Systems (Chiral Swarm)
+
+**The Chiral Grid (You):**  
+Your keyboard is your weapon system. Each keystroke fires left-hand (blue) or right-hand (pink) plasma, reinforcing real-world typing mechanics.
+
+**Key Abduction Mechanic:**  
+Mistakes during boss encounters result in stolen keys. Recover them through precision typing under pressure.
+
+**Dual Fire Mode:**  
+Rescue captured keys via Bonus Drones to unlock enhanced firing capabilities.
+
+**EMP Weapon:**  
+Charged through high accuracy and combos. A tactical full-screen blast triggered with the Enter key.
+
+---
