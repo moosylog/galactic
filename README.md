@@ -30,7 +30,7 @@
 
 You don’t master a split ergonomic keyboard by typing linear, passive sentences on a single screen. Motor learning science shows that the transition to ortholinear and columnar boards is bottlenecked by a lack of spatial awareness and bilateral independence.
 
-- **The Split Drop-Off:** Community data shows users experience a brutal 30% to 50% drop in typing speed when switching to a split board. Standard practice doesn't isolate the hands to fix this.
+- **The Split Drop-Off:** Transition logs and community surveys (extensively documented across *r/ErgoMechKeyboards* and Monkeytype progression charts) show users experience a brutal 30% to 50% drop in typing speed when switching to a split, columnar board. Standard practice doesn't isolate the hands to fix this.
 - **Visual Dependency:** Staring at your hands or a static screen prevents "blind" tactile mastery, capping your reaction speed and causing panic under cognitive load.
 - **Neurological Cross-Talk:** Traditional flat keyboards allow hands to cheat and cross the midline. Split boards require strict left/right separation, which rote repetition fails to enforce under pressure.
 
