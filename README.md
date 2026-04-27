@@ -1,14 +1,14 @@
 <div align="center">
 
 # GALACTIC KEYSTROKE
-**Master your bigrams. Unlock real typing speed.**
+**Survive the swarm. Rescue your keys. Unlock real typing speed.**
 
 [![HTML5](https://img.shields.io/badge/HTML5-Strict-E34F26?style=for-the-badge&logo=html5&logoColor=white)](#)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-00FF66?style=for-the-badge)](#)
 [![eSports Ready](https://img.shields.io/badge/eSports-Ready-BC13FE?style=for-the-badge)](#)
 [![Moosy Research](https://img.shields.io/badge/Moosy_Research-2026-00E5FF?style=for-the-badge)](#)
 
-*An adaptive arcade typing system that trains the key combinations that actually make you faster.*
+*An adrenaline-fueled typing survival game that diagnoses your errors and weaponizes your mistakes.*
 
 <br>
 
@@ -27,81 +27,77 @@
 
 ## ⚡ Why Most Typing Practice Fails
 
-You don’t get faster by typing random sentences.
+You don’t get faster by typing random, boring sentences.
 
-Real speed comes from mastering **bigrams**—the key-to-key transitions your fingers perform thousands of times.
+Real speed comes from pushing your limits in a "flow state" and actively fixing **bigrams**—the key-to-key transitions your fingers stumble on.
 
 - Slow transitions = lost speed  
-- Weak combinations = more errors  
-- Repetition without targeting = wasted effort  
+- Unnoticed bad habits = permanent plateaus  
+- Repetition without pressure = wasted effort  
 
 ---
 
 ## 🧠 What This Game Actually Trains
 
-Galactic Keystroke is built to **identify and strengthen your weakest bigrams**.
+Galactic Keystroke wraps a high-end diagnostic tool inside an arcade shooter. 
 
-- It tracks how you move between keys  
-- Detects hesitation and error patterns  
-- Forces repetition of your weakest combinations  
-- Adapts in real time as you improve  
+- **The Swarm** pushes your raw WPM, accuracy, and flow state to the absolute limit.  
+- **The Bosses** analyze your mistakes. Make a typo during a boss fight, and it will immediately *abduct those specific keys from your ship*.  
+- **The Rescue** forces you to drill the exact bigrams you just failed under pressure to win your keys back.  
 
-You are not just typing—you are **rewiring muscle memory under pressure**.
+You are not just typing—you are **rewiring muscle memory under fire**.
 
 ---
 
 ## 🚀 How It Works
 
-Typing becomes combat.
+Typing becomes tactical combat.
 
-- Words descend as attack patterns  
-- Each letter fires from your actual keyboard layout  
-- Left and right hands act independently  
-- Weak transitions reappear more often  
+- Words descend as high-speed attack patterns  
+- Your on-screen keyboard acts as your weapon system  
+- Survive the waves to build massive combos and EMP charges  
+- Face the Dreadnought Bosses to diagnose and drill your weak points  
 
 The result:  
-👉 You train the exact movements that limit your speed
+👉 An addictive arcade loop that secretly eliminates your hesitation zones.
 
 ---
 
 ## 🎯 What You Gain
 
-- Faster key transitions (real WPM increase)  
-- Higher accuracy under pressure  
-- Stronger muscle memory across layouts  
-- Elimination of “problem keys” and hesitation zones  
+- Faster overall key transitions (real WPM increase)  
+- Higher accuracy and composure under pressure  
+- Subconscious reinforcement of left/right hand separation  
+- Immediate elimination of “problem keys” via the Hostage mechanic  
 
 ---
 
 ## 🔥 Core Systems
 
-* **Adaptive Bigram Targeting:** Your weakest key combinations appear more often until they improve  
-* **Pressure-Based Learning:** Speed and accuracy are trained under real-time stress  
-* **Combo & Momentum:** Consistency builds speed—mistakes break flow  
-* **EMP Reset:** Earn a full-screen clear (Enter key) through precision play  
-* **Boss Pressure Cycles:** Periodic spikes that force perfect execution  
+* **The Hostage Mechanic:** Bosses detect your typos, abduct your weak keys, and force you to flawlessly type targeted practice words to break their shields.  
+* **Live Biometric HUD:** Your virtual keyboard glows based on real-time performance—green for flawless, yellow for hesitations, and pulsing red for high-error keys.  
+* **Chiral Targeting:** Lasers are color-coded (Blue/Pink) to physically match your left and right hand, subliminally enforcing proper touch-typing form.  
+* **Combo & EMP:** Consistency builds speed. Flawless typing charges a screen-clearing tactical EMP (Enter key).  
 
 ---
 
 ## ⚔️ Gameplay Loop
 
-1. Identify incoming words  
-2. Execute precise key sequences  
-3. Eliminate threats before impact  
-4. Maintain rhythm and accuracy  
-5. Adapt as difficulty scales  
+1. Survive the swarm to build momentum and raw speed  
+2. Reach Sector Bosses every 5 waves  
+3. Make a mistake? Your keys are taken hostage  
+4. Execute specific bigram drills to rescue your hardware  
+5. Unleash EMPs, clear the sector, and climb the Hall of Fame  
 
 ---
 
 ## ⚡ Why It Works
 
-- Focuses on **what actually limits typing speed**  
-- Replaces passive practice with **active correction**  
-- Trains under **timing, pressure, and consequence**  
-- Continuously adapts to your performance  
+- Combines **flow-state adrenaline** with **targeted remediation** - Replaces passive practice with **active consequence** - Automatically identifies what holds you back without boring you  
+- Continuously adapts the speed to your WPM  
 
-This is not practice.  
-This is **targeted skill training disguised as a game**.
+This is not a typing test.  
+This is **championship-tier skill training disguised as an arcade game**.
 
 ---
 
@@ -123,7 +119,7 @@ Upload your own JSON layout:
 
 - Keys are mapped automatically  
 - Layout is visualized in-game  
-- Training adapts to your exact setup  
+- Training adapts to your exact physical setup  
 
 Compatible with MoErgo, ZMK, and similar configurators.
 
@@ -134,7 +130,7 @@ Compatible with MoErgo, ZMK, and similar configurators.
 - Open the game  
 - Select your layout  
 - Start typing  
-- Improve immediately  
+- Survive the swarm  
 
 No installs. No setup. No friction.
 
@@ -142,10 +138,10 @@ No installs. No setup. No friction.
 
 ## 🧬 Bottom Line
 
-If you want to get faster, you don’t need more practice.
+If you want to get faster, you don’t need more flashcards.
 
-You need better repetition.
+You need adrenaline. You need consequences. You need better repetition.
 
-**Train your bigrams. Fix your weak links. Get faster where it counts.**
+**Survive the swarm. Rescue your keys. Get faster where it counts.**
 
 ---
