@@ -13,7 +13,7 @@
 
 <br>
 
-<a href="#" target="_blank">
+<a href="https://moosylog.github.io/galactic/" target="_blank">
   <img 
     src="https://img.shields.io/badge/🚀%20LAUNCH%20GAME-TRAIN%20NOW-00FF66?style=for-the-badge"
     alt="Launch Galactic Keystroke"
