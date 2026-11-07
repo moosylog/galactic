@@ -1,3 +1,4 @@
+<!-- © 2026 Moosy Research. All rights reserved. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -95,6 +96,7 @@
                 <div style="grid-column: 1 / -1;">
                     <label>Advanced Custom Layout Override</label>
                     <label for="jsonUpload" class="upload-btn" id="lblUpload">📁 Upload MoErgo json</label>
+                    <select id="layerSelect" style="display:none" title="Layer to train" onchange="onLayerChange(this.value)"></select>
                     <input type="file" id="jsonUpload" accept=".json" style="display: none;" onchange="handleJsonUpload(event)">
                     
                     <div class="advanced-toggle" onclick="toggleAdvanced()">[ VIEW ADVANCED LAYOUT DATA ]</div>
@@ -119,6 +121,7 @@
                 <div>AVERAGE WPM <span id="end-wpm" style="color:var(--neon-purple)">0</span></div>
                 <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div>
                 <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
+                <div id="end-bigrams" style="margin-top:10px;font-size:0.85rem;color:#8fa3b8"></div>
             </div>
 
             <div id="heatmap-container">
@@ -137,5 +140,6 @@
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/main.js"></script>
+<div id="copyright" style="position:fixed;bottom:4px;right:8px;font:11px 'Share Tech Mono',monospace;color:#4a5c70;z-index:5;pointer-events:none">© 2026 Moosy Research. All rights reserved.</div>
 </body>
 </html>
