@@ -1,0 +1,1 @@
+{"name":"galactic-keystroke","private":true,"scripts":{"test":"node tests/smoke.test.js"}}
