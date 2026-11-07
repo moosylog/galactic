@@ -1,3 +1,4 @@
+/* © 2026 Moosy Research. All rights reserved. */
 "use strict";
 
 const UI = {
@@ -38,7 +39,7 @@ const canvas = document.getElementById('game-canvas'); const ctx = canvas.getCon
 let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
-    bioTracker: {}, isSpawning: false,
+    bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
     highScores: [], stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
@@ -67,6 +68,7 @@ function loadGameData() {
         if (save) {
             if (save.version !== CURRENT_VERSION) throw new Error("Outdated cache version");
             if (save.highScores && Array.isArray(save.highScores)) STATE.highScores = save.highScores;
+            if (save.bigrams && typeof save.bigrams === "object") STATE.bigrams = save.bigrams;
             if (save.isCustom) {
                 if (!Array.isArray(save.customArray)) throw new Error("Corrupted custom array");
                 UI.hwSelect.value = save.baseHardware || 'go60';
@@ -91,7 +93,7 @@ function loadGameData() {
 function saveGameData() {
     try {
         const payload = {
-            version: CURRENT_VERSION, highScores: STATE.highScores,
+            version: CURRENT_VERSION, highScores: STATE.highScores, bigrams: STATE.bigrams,
             baseHardware: UI.hwSelect.value, layout: UI.layoutSelect.value,
             customArray: customLayoutArray, isCustom: UI.layoutSelect.value === 'custom'
         };
@@ -225,12 +227,22 @@ function findBindings(node) {
     return [];
 }
 
-function handleJsonUpload(ev) {
-    const file = ev.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
+let uploadedData = null, selectedLayerIdx = 0;
+function getLayerBindings(data, idx) {
+    const root = data.keymap || data;
+    if (Array.isArray(root.layers) && Array.isArray(root.layers[idx])) return root.layers[idx];
+    return findBindings(data);
+}
+function populateLayerSelect(data) {
+    const root = data.keymap || data, sel = document.getElementById('layerSelect');
+    if (!sel || !Array.isArray(root.layers)) return;
+    sel.innerHTML = '';
+    root.layers.forEach((_, i) => { const o = document.createElement('option'); o.value = i; o.textContent = (root.layer_names && root.layer_names[i]) || ('Layer ' + i); sel.appendChild(o); });
+    sel.value = selectedLayerIdx; sel.style.display = 'block';
+}
+function onLayerChange(v) { selectedLayerIdx = +v; if (uploadedData) importLayout(uploadedData); }
+function importLayout(data) {
+    uploadedData = data;
             let detectedHw = 'go60';
             let kbStr = (data.keyboard || data.name || "").toLowerCase();
             if(kbStr.includes('glove80')) detectedHw = 'glove80'; 
@@ -239,7 +251,8 @@ function handleJsonUpload(ev) {
             else if(kbStr.includes('ansi')) detectedHw = 'ansi60';
             UI.hwSelect.value = detectedHw;
             
-            let bindings = findBindings(data) || [];
+            let bindings = getLayerBindings(data, selectedLayerIdx) || [];
+            const expectedLen = DATA.GEO[detectedHw].length;
             const limit = DATA.GEO[detectedHw].length;
             let arr = [];
             for (let i = 0; i < limit; i++) {
@@ -253,11 +266,16 @@ function handleJsonUpload(ev) {
             }
             UI.layoutSelect.value = 'custom';
             UI.uploadBtn.textContent = '✅ MOERGO JSON LOADED';
+            if (bindings.length && bindings.length !== expectedLen) UI.uploadBtn.textContent = '⚠️ LAYER HAS ' + bindings.length + ' KEYS (EXPECTED ' + expectedLen + ')';
             setTimeout(() => UI.uploadBtn.textContent = "📁 Upload MoErgo json", 3000);
             
             updateLayoutString(); saveGameData();
-        } catch(err) { alert("Invalid JSON format."); }
-    }; 
+            populateLayerSelect(data);
+}
+function handleJsonUpload(ev) {
+    const file = ev.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => { try { selectedLayerIdx = 0; importLayout(JSON.parse(e.target.result)); } catch(err) { alert("Invalid JSON format."); } };
     reader.readAsText(file); ev.target.value = '';
 }
 
@@ -326,6 +344,7 @@ function buildHUD() {
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
             STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: false, isAbducted: false };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
+            tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
     });
 }
@@ -513,25 +532,29 @@ function drawHeatmap() {
     });
 }
 
-function getWordForWave(wave, isBoss = false) {
+function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let diff = DATA.DIFFICULTY[STATE.difficulty];
-    let minLen = diff.minLen;
-    let maxLen = diff.maxLen;
+    let minLen = diff.minLen, maxLen = diff.maxLen;
     if (isBoss) { minLen = Math.min(8, minLen + 2); maxLen = Math.min(8, maxLen + 2); }
-    let targetLen = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
-
-    let bucket = DICT_BUCKETS[targetLen] || DICT_BUCKETS[4]; 
-    if (!bucket || bucket.length === 0) bucket = ["error"]; 
-
-    let missingKeys = STATE.stolenKeys;
-    let validWords = bucket.filter(w => !missingKeys.some(mk => w.includes(mk)));
-    if (validWords.length === 0) validWords = bucket; 
-    
-    let unused = validWords.filter(w => !usedWords.has(w));
-    if (unused.length === 0) { usedWords.clear(); unused = validWords; }
-    
+    let len = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
+    let bucket = [];
+    for (let d = 0; d < 6 && bucket.length === 0; d++) bucket = DICT_BUCKETS[len - d] || DICT_BUCKETS[len + d] || [];
+    const typable = w => [...w].every(ch => STATE.activeKeys[ch]);
+    let pool = bucket.filter(w => typable(w) && !STATE.stolenKeys.some(mk => w.includes(mk)));
+    if (pool.length === 0) pool = DATA.DICTIONARY.filter(typable);
+    if (pool.length === 0) return "the";
+    if (forceBigram) {
+        const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
+        if (f.length) pool = f;
+    } else if (!isBoss && Math.random() < 0.35) {
+        const wb = weakBigrams();
+        const hit = pool.filter(w => !usedWords.has(w) && wb.some(b => w.includes(b)));
+        if (hit.length) pool = hit;
+    }
+    let unused = pool.filter(w => !usedWords.has(w));
+    if (unused.length === 0) { usedWords.clear(); unused = pool; }
     let word = unused[Math.floor(Math.random() * unused.length)];
-    usedWords.add(word); 
+    usedWords.add(word);
     return word;
 }
 
@@ -540,6 +563,7 @@ function spawnWave() {
     
     STATE.currentTarget = null; STATE.isSpawning = false;
     let isBossWave = (STATE.wave > 0 && STATE.wave % 5 === 0);
+    STATE.challenge = false; STATE.focusBigram = null;
     
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
@@ -549,7 +573,10 @@ function spawnWave() {
         createPopText("BOSS INCOMING! DEFEND YOUR KEYS!", canvas.width/2, canvas.height/2, '#ffea00');
         STATE.taFadeOutTime = performance.now() + 5000; 
     } else {
-        createPopText(`WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, '#00f3ff');
+        STATE.challenge = (STATE.wave % 5 === 3);
+        if (STATE.challenge || STATE.wave % 3 === 0) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
+        createPopText(STATE.challenge ? 'CHALLENGE STAGE: NO DAMAGE, PERFECT = 2x' : `WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, STATE.challenge ? '#bc13fe' : '#00f3ff');
+        if (STATE.focusBigram) createPopText('FOCUS: ' + STATE.focusBigram.toUpperCase(), canvas.width/2, canvas.height/2 + 50*STATE.sf, '#ffea00');
         
         // TOURNAMENT PACING: Tighter board, less visual clutter
         // Starts at 1 word, adds 1 word every 4 waves. Base maximum of 3 words.
@@ -559,11 +586,11 @@ function spawnWave() {
         let wpmBonus = STATE.currentWPM >= 90 ? 1 : 0; 
         
         // Absolute hard cap of 4 words on screen at once
-        let numWords = Math.min(4, baseWords + wpmBonus); 
+        let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = 4; 
         
         STATE.taFadeOutTime = performance.now() + 2000 + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
-            let word = getWordForWave(STATE.wave, false);
+            let word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             let wordId = "W" + Date.now() + w;
             for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, wordId));
         }
@@ -622,7 +649,7 @@ function damagePlayer(amt) {
         }
         
         drawHeatmap(); 
-        if (UI.endScreen) UI.endScreen.style.display = 'flex'; 
+        showBigramReport(); if (UI.endScreen) UI.endScreen.style.display = 'flex'; 
     }
 }
 
@@ -700,7 +727,7 @@ function gameLoop(time) {
         
         if (STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty].scoreMod;
-            let bonus = Math.floor(1000 * STATE.wave * diffScoreMod);
+            let bonus = Math.floor(1000 * STATE.wave * diffScoreMod * (STATE.challenge ? 2 : 1));
             STATE.score += bonus;
             createPopText(`PERFECT WAVE! +${bonus}`, canvas.width/2, canvas.height/2 - 50, '#00f3ff');
         }
@@ -774,7 +801,7 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    initAudio(); resizeCanvas(); buildHUD();
+    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.suspects = []; computeSuspects();
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
     
@@ -836,7 +863,7 @@ document.addEventListener('keydown', (e) => {
     STATE.totalKeystrokes++;
     STATE.waveTotal++;
 
-    let targetEnemy = null; let seqMatched = false;
+    let targetEnemy = null; let seqMatched = false; let startsWord = false;
     let hitDrone = bonusDrones.find(b => b.char === inputChar && b.active && !b.targeted);
     
     if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle') {
@@ -855,12 +882,12 @@ document.addEventListener('keydown', (e) => {
         let matching = enemies.filter(en => !en.isBoss && en.char === inputChar && en.active && !en.targeted);
         if(matching.length > 0) {
             matching.sort((a,b) => b.y - a.y);
-            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index };
+            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index }; startsWord = (targetEnemy.index === 0);
         }
     }
 
     if(targetEnemy || hitDrone) {
-        STATE.correctKeystrokes++; 
+        STATE.correctKeystrokes++; pushAcc(1); recordBigram(inputChar, now);
         STATE.waveCorrect++;
 
         if (hitDrone) {
@@ -895,16 +922,11 @@ document.addEventListener('keydown', (e) => {
             }
         }
         
-        if (seqMatched || (targetEnemy && targetEnemy.isBoss && targetEnemy.typedIndex > 1) || (targetEnemy && targetEnemy.isPractice) || hitDrone) { 
+        if (seqMatched || startsWord || (targetEnemy && targetEnemy.isBoss && targetEnemy.typedIndex > 1) || (targetEnemy && targetEnemy.isPractice) || hitDrone) { 
             STATE.combo++; if(STATE.combo > STATE.maxCombo) STATE.maxCombo = STATE.combo; 
         } else STATE.combo = 0; 
         
-        let currentAcc = STATE.totalKeystrokes > 0 ? STATE.correctKeystrokes / STATE.totalKeystrokes : 1;
-        if (currentAcc === 1.0) STATE.scoreMultiplier = 2.0;
-        else if (currentAcc >= 0.98) STATE.scoreMultiplier = 1.5;
-        else if (currentAcc >= 0.95) STATE.scoreMultiplier = 1.0;
-        else if (currentAcc >= 0.90) STATE.scoreMultiplier = 0.5;
-        else STATE.scoreMultiplier = 0.1;
+        updateScoreMultiplier();
         
         updateUI();
         AudioFX.laser(keyData.x / canvas.width); 
@@ -914,6 +936,7 @@ document.addEventListener('keydown', (e) => {
         if(lastKeyPress > 0 && (now - lastKeyPress) < 2000) { STATE.bioTracker[inputChar].latencies.push(now - lastKeyPress); if(STATE.bioTracker[inputChar].latencies.length > 20) STATE.bioTracker[inputChar].latencies.shift(); }
     
     } else {
+        pushAcc(0); if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
         STATE.recentErrors.push(now);
         STATE.recentErrors = STATE.recentErrors.filter(t => now - t < 100);
         
@@ -928,17 +951,17 @@ document.addEventListener('keydown', (e) => {
 
         AudioFX.error(); STATE.combo = 0; 
         
-        let currentAcc = STATE.totalKeystrokes > 0 ? STATE.correctKeystrokes / STATE.totalKeystrokes : 1;
-        if (currentAcc === 1.0) STATE.scoreMultiplier = 2.0;
-        else if (currentAcc >= 0.98) STATE.scoreMultiplier = 1.5;
-        else if (currentAcc >= 0.95) STATE.scoreMultiplier = 1.0;
-        else if (currentAcc >= 0.90) STATE.scoreMultiplier = 0.5;
-        else STATE.scoreMultiplier = 0.1;
+        updateScoreMultiplier();
         
         updateUI();
         
         if(!STATE.bioTracker[inputChar]) STATE.bioTracker[inputChar] = { presses:0, misses:0, latencies:[] };
         STATE.bioTracker[inputChar].misses++;
+        {
+            let exp = STATE.currentTarget && enemies.find(en => en.wordId === STATE.currentTarget.wordId && en.index === STATE.currentTarget.index);
+            let bw = STATE.bossRef && STATE.bossRef.state === 'idle' && STATE.bossRef.word ? STATE.bossRef.word[STATE.bossRef.typedIndex] : null;
+            recordBigramError(exp && exp.char ? exp.char : (bw ? bw.toLowerCase() : null));
+        }
 
         if (STATE.bossRef && STATE.bossRef.state === 'idle' && STATE.bossRef.word) {
             let bossWord = STATE.bossRef.word;

@@ -1,3 +1,4 @@
+/* © 2026 Moosy Research. All rights reserved. */
 "use strict";
 
 class BossShip {
@@ -20,6 +21,11 @@ class BossShip {
     }
     
     update(dt, time) {
+        if (this.state === 'idle') {
+            if (this.typedIndex !== this.lastIdx) { this.lastIdx = this.typedIndex; this.idleTime = 0; }
+            this.idleTime = (this.idleTime || 0) + dt;
+            if (this.idleTime > 4000 + this.word.length * 1200) { this.idleTime = 0; damagePlayer(10); createPopText("BOSS STRIKE!", this.x, this.y + 60 * STATE.sf, '#ff0055'); }
+        }
         if (this.state === 'enter') {
             this.y += (this.targetY - this.y) * 0.05 * (dt/16);
             if (Math.abs(this.targetY - this.y) < 5) this.state = 'idle';
@@ -391,7 +397,7 @@ class SwarmEnemy {
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
         let waveScale = Math.min(0.3, STATE.wave * 0.015); 
-        let baseSpeed = diff.baseSpeed + waveScale;
+        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.9, 0.9 + STATE.currentWPM / 200));
 
         if(this.state === 'enter') {
             let dx = this.formX - this.x; let dy = this.formY - this.y;
@@ -420,7 +426,7 @@ class SwarmEnemy {
         }
 
         let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
-        if(this.y > splitLine) { this.active = false; damagePlayer(10); createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) damagePlayer(10); createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {
