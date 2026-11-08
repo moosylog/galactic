@@ -403,7 +403,7 @@ class SwarmEnemy {
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
         let waveScale = Math.min(0.3, STATE.wave * 0.015); 
-        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.9, 0.9 + STATE.currentWPM / 200));
+        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150));
 
         if(this.state === 'enter') {
             let dx = this.formX - this.x; let dy = this.formY - this.y;
@@ -417,13 +417,10 @@ class SwarmEnemy {
             this.x = this.formX + Math.sin(time/500 + this.index) * (20 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
+            this.hoverT = (this.hoverT || 0) + dt;
             let diveChance = 0.0005 + (STATE.wave * 0.0002);
-            
-            if (enemies.length <= 8) {
-                diveChance += 0.01; 
-            }
-            
-            if(Math.random() < diveChance) this.state = 'dive';
+            if (enemies.length <= 8) diveChance += diff.rush;
+            if (this.hoverT > diff.grace && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
         }
         else if (this.state === 'dive') {
             let dx = this.targetNode.x - this.x; this.x += dx * 0.02 * (dt/16);
@@ -432,7 +429,7 @@ class SwarmEnemy {
         }
 
         let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
-        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) damagePlayer(10); createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) damagePlayer(diff.missDmg); createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {

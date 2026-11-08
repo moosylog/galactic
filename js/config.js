@@ -5,9 +5,9 @@ const CURRENT_VERSION = "1.5.0";
 
 const DATA = {
     DIFFICULTY: {
-        academy: { minLen: 3, maxLen: 5, baseSpeed: 0.25, scoreMod: 1.0 },
-        contender: { minLen: 4, maxLen: 7, baseSpeed: 0.45, scoreMod: 2.0 },
-        apex: { minLen: 5, maxLen: 8, baseSpeed: 0.65, scoreMod: 3.0 }
+        academy: { minLen: 3, maxLen: 5, baseSpeed: 0.25, scoreMod: 1.0, grace: 7000, rush: 0.002, missDmg: 5, hold: 120000 },
+        contender: { minLen: 4, maxLen: 7, baseSpeed: 0.45, scoreMod: 2.0, grace: 4000, rush: 0.005, missDmg: 8, hold: 10000 },
+        apex: { minLen: 5, maxLen: 8, baseSpeed: 0.65, scoreMod: 3.0, grace: 1500, rush: 0.01, missDmg: 10, hold: 2000 }
     },
     GEO: {
         go60: [{x:0,y:0.9},{x:1,y:0.9},{x:2,y:0.25},{x:3,y:0},{x:4,y:0.15},{x:5,y:0.25},{x:11,y:0.25},{x:12,y:0.15},{x:13,y:0},{x:14,y:0.25},{x:15,y:0.9},{x:16,y:0.9},{x:0,y:1.9},{x:1,y:1.9},{x:2,y:1.25},{x:3,y:1},{x:4,y:1.15},{x:5,y:1.25},{x:11,y:1.25},{x:12,y:1.15},{x:13,y:1},{x:14,y:1.25},{x:15,y:1.9},{x:16,y:1.9},{x:0,y:2.9},{x:1,y:2.9},{x:2,y:2.25},{x:3,y:2},{x:4,y:2.15},{x:5,y:2.25},{x:11,y:2.25},{x:12,y:2.15},{x:13,y:2},{x:14,y:2.25},{x:15,y:2.9},{x:16,y:2.9},{x:0,y:3.9},{x:1,y:3.9},{x:2,y:3.25},{x:3,y:3},{x:4,y:3.15},{x:5,y:3.25},{x:11,y:3.25},{x:12,y:3.15},{x:13,y:3},{x:14,y:3.25},{x:15,y:3.9},{x:16,y:3.9},{x:2,y:4.25},{x:3,y:4},{x:4,y:4.15},{x:12,y:4.15},{x:13,y:4},{x:14,y:4.25},{x:3,y:5.25,r:15},{x:4,y:5.25,r:30},{x:5,y:5.25,r:45},{x:11,y:5.25,r:-45},{x:12,y:5.25,r:-30},{x:13,y:5.25,r:-15}],
