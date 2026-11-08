@@ -138,20 +138,21 @@ function updateScoreMultiplier() {
 }
 function showBigramReport() {
     const el = document.getElementById('end-bigrams'); if (!el) return;
-    const cat = {}, start = STATE.bigramsStart || {}; let best = null;
+    const start = STATE.bigramsStart || {}; let best = null; const ups = [];
     Object.entries(STATE.bigrams).forEach(([k, b]) => {
-        const t = bigramType(k[0], k[1]);
-        if (t) { const c = cat[t] || (cat[t] = { n: 0, ms: 0, err: 0 }); c.n += b.n; c.ms += b.ms; c.err += b.err; }
         const s = start[k];
+        if (tierOf(b) > tierOf(s)) ups.push(k.toUpperCase() + ' > ' + TIERS[tierOf(b)]);
         if (s && s.n >= 5 && b.n - s.n >= 3 && b.n >= s.n) {
             const d = s.ms / s.n - (b.ms - s.ms) / (b.n - s.n);
             if (d >= 20 && (!best || d > best.d)) best = { k, d };
         }
     });
-    const wb = weakBigrams().slice(0, 5).map(x => x.toUpperCase());
-    el.textContent = (STATE.newBest ? 'NEW HIGH SCORE!  ' : '') + (best ? 'IMPROVED: ' + best.k.toUpperCase() + ' -' + Math.round(best.d) + 'ms   ' : '')
-        + (wb.length ? 'FOCUS: ' + wb.join(', ') + '   ' : '')
-        + Object.entries(cat).map(([t, c]) => `${t.toUpperCase()} ${Math.round(c.ms / Math.max(1, c.n))}ms/${c.err}err`).join('  ');
+    const mi = masteryInfo(), wb = weakBigrams().slice(0, 5).map(x => x.toUpperCase());
+    el.textContent = (STATE.newBest ? 'NEW HIGH SCORE!  ' : '') + 'RANK: ' + mi.rank + ' (' + mi.pts + ' PTS)  '
+        + (ups.length ? 'LEVEL UP: ' + ups.slice(0, 4).join(', ') + '  ' : '')
+        + (best ? 'IMPROVED: ' + best.k.toUpperCase() + ' -' + Math.round(best.d) + 'ms  ' : '')
+        + (wb.length ? 'FOCUS: ' + wb.join(', ') + '  ' : '') + '[ENTER = PLAY AGAIN]';
+    STATE.resultText = 'GALACTIC KEYSTROKE' + (STATE.daily ? ' DAILY ' + STATE.dailyDate : '') + ' | SECTOR ' + STATE.wave + ' | ' + STATE.score + ' PTS | ' + mi.rank;
 }
 
 const SECTOR_BG = ['#0a0a2a', '#1a0a2e', '#062a2a', '#2a1a06', '#2a0a14'];
@@ -164,7 +165,15 @@ function comboMilestone() {
     }
 }
 function wordComplete(t, word, now) {
+    if (STATE.ufoId && t.wordId === STATE.ufoId) {
+        STATE.ufoId = null; STATE.score += 300; addEmpCharge(30); AudioFX.bonus();
+        createPopText('UFO DOWN! +300', canvas.width / 2, canvas.height / 2 + 190 * STATE.sf, '#c77dff');
+    }
     if (!t.full || t.dirty) return;
+    if (STATE.goldenId && t.wordId === STATE.goldenId) {
+        STATE.goldenId = null; STATE.score += 100 * word.length; STATE.shield = true; AudioFX.bonus();
+        createPopText('GOLDEN WORD! SHIELD READY', canvas.width / 2, canvas.height / 2 + 150 * STATE.sf, '#ffd700');
+    }
     const ms = now - t.t0; if (ms <= 0) return;
     const wpm = (word.length / 5) / (ms / 60000);
     STATE.score += 10 * word.length;
@@ -173,3 +182,27 @@ function wordComplete(t, word, now) {
         createPopText('BLAZING ' + Math.round(wpm) + ' WPM', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00ff66');
     } else if (word.length >= 5) createPopText('CLEAN', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00f3ff');
 }
+
+// ---- mastery tiers and ranks (shown on the end screen only) ----
+const TIERS = ['', 'BRONZE', 'SILVER', 'GOLD'];
+const RANKS = [[150, 'ADMIRAL'], [70, 'COMMANDER'], [30, 'ACE'], [10, 'PILOT'], [0, 'CADET']];
+function tierOf(b) {
+    if (!b) return 0;
+    const tot = b.n + b.err, e = tot ? b.err / tot : 1, a = b.n ? b.ms / b.n : 9999;
+    if (b.n >= 20 && e <= 0.05 && a <= 450) return 3;
+    if (b.n >= 10 && e <= 0.10 && a <= 700) return 2;
+    return (b.n >= 5 && e <= 0.20) ? 1 : 0;
+}
+function masteryInfo() {
+    let pts = 0; Object.values(STATE.bigrams).forEach(b => { pts += tierOf(b); });
+    return { pts, rank: RANKS.find(r => pts >= r[0])[1] };
+}
+// ---- daily challenge: same word sequence for everyone on a given UTC date ----
+let dailyRand = null;
+function initDaily() {
+    const s = new Date().toISOString().slice(0, 10); let h = 0;
+    for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    dailyRand = () => { h = (h + 0x6D2B79F5) >>> 0; let t = h; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    STATE.dailyDate = s;
+}
+function wordRand() { return (STATE.daily && dailyRand) ? dailyRand() : Math.random(); }

@@ -390,6 +390,7 @@ class SwarmEnemy {
         this.targetNode = STATE.activeKeys[this.char] || {x: canvas.width/2, y: canvas.height};
         this.state = 'enter'; 
         this.x = (canvas.width / 2) + (Math.random() * 400 - 200) * STATE.sf; this.y = -50 * STATE.sf;
+        this.sideRight = this.wordId.charCodeAt(this.wordId.length - 1) % 2 === 0;
         
         let spacing = 70 * STATE.sf; let wordWidth = totalInWord * spacing;
         this.formX = (canvas.width/2) - (wordWidth/2) + (index * spacing);
@@ -405,12 +406,19 @@ class SwarmEnemy {
         let waveScale = Math.min(0.3, STATE.wave * 0.015); 
         let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150));
 
+        if (this.state === 'ufo') {
+            this.x += this.vx * (dt / 16);
+            if (this.x < -120 * STATE.sf || this.x > canvas.width + 120 * STATE.sf) this.active = false;
+            return;
+        }
         if(this.state === 'enter') {
-            let dx = this.formX - this.x; let dy = this.formY - this.y;
-            let swoopSpeed = baseSpeed * 0.15;
-            this.x += dx * swoopSpeed * (dt/16); this.y += dy * swoopSpeed * (dt/16);
-            this.x += Math.sin(time/200 + this.index) * (2 * STATE.sf);
-            if(Math.abs(dx) < 5 && Math.abs(dy) < 5) this.state = 'hover';
+            this.enterT = (this.enterT || 0) + dt;
+            if (this.sx === undefined) { this.sx = this.sideRight ? canvas.width + 60 * STATE.sf : -60 * STATE.sf; this.sy = 40 * STATE.sf; }
+            const p = Math.min(1, Math.max(0, this.enterT - this.index * 140) / 2400);
+            const ease = p * p * (3 - 2 * p), loop = 1 - p;
+            this.x = this.sx + (this.formX - this.sx) * ease + Math.sin(p * Math.PI * 2) * 140 * STATE.sf * loop * (this.sideRight ? -1 : 1);
+            this.y = this.sy + (this.formY - this.sy) * ease + (1 - Math.cos(p * Math.PI * 2)) * 70 * STATE.sf * loop;
+            if (p >= 1) this.state = 'hover';
         }
         else if (this.state === 'hover') {
             this.formY += 0.2 * STATE.sf * (dt/16);
@@ -424,12 +432,13 @@ class SwarmEnemy {
         }
         else if (this.state === 'dive') {
             let dx = this.targetNode.x - this.x; this.x += dx * 0.02 * (dt/16);
+            this.diveT = (this.diveT || 0) + dt; this.x += Math.cos(this.diveT / 500 + this.index) * 2.5 * STATE.sf * (dt/16);
             this.y += baseSpeed * STATE.sf * (dt/16); 
             this.x += Math.sin(time/100) * (5 * STATE.sf);
         }
 
         let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
-        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) damagePlayer(diff.missDmg); createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(diff.missDmg); } createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {

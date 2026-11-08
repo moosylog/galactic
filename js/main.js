@@ -470,7 +470,7 @@ function drawShipHUD(time) {
                 others.forEach(w => {
                     for (let q = 0; q < w.word.length; q++) {
                         let ch = w.word[q].toUpperCase(), cw = ctx.measureText(ch).width;
-                        ctx.fillStyle = q === 0 ? '#00ff66' : 'rgba(255,255,255,0.9)';
+                        ctx.fillStyle = w.id === STATE.ufoId ? '#c77dff' : w.id === STATE.goldenId ? '#ffd700' : (q === 0 ? '#00ff66' : 'rgba(255,255,255,0.9)');
                         ctx.fillText(ch, x + cw / 2, anchorY); x += cw;
                     }
                     x += gap;
@@ -553,7 +553,7 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let diff = DATA.DIFFICULTY[STATE.difficulty];
     let minLen = diff.minLen, maxLen = diff.maxLen;
     if (isBoss) { minLen = Math.min(8, minLen + 2); maxLen = Math.min(8, maxLen + 2); }
-    let len = minLen + Math.floor(Math.random() * (maxLen - minLen + 1));
+    let len = minLen + Math.floor(wordRand() * (maxLen - minLen + 1));
     let bucket = [];
     for (let d = 0; d < 6 && bucket.length === 0; d++) bucket = DICT_BUCKETS[len - d] || DICT_BUCKETS[len + d] || [];
     const typable = w => [...w].every(ch => STATE.activeKeys[ch]);
@@ -563,14 +563,14 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
         if (f.length) pool = f;
-    } else if (!isBoss && Math.random() < 0.35) {
+    } else if (!isBoss && !STATE.daily && Math.random() < 0.35) {
         const wb = weakBigrams();
         const hit = pool.filter(w => !usedWords.has(w) && wb.some(b => w.includes(b)));
         if (hit.length) pool = hit;
     }
     let unused = pool.filter(w => !usedWords.has(w));
     if (unused.length === 0) { usedWords.clear(); unused = pool; }
-    let word = unused[Math.floor(Math.random() * unused.length)];
+    let word = unused[Math.floor(wordRand() * unused.length)];
     usedWords.add(word);
     return word;
 }
@@ -591,7 +591,7 @@ function spawnWave() {
         STATE.taFadeOutTime = performance.now() + 5000; 
     } else {
         STATE.challenge = (STATE.wave % 5 === 3);
-        if (STATE.challenge || STATE.wave % 3 === 0) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
+        if (!STATE.daily && (STATE.challenge || STATE.wave % 3 === 0)) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
         createPopText(STATE.challenge ? 'CHALLENGE STAGE: NO DAMAGE, PERFECT = 2x' : `WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, STATE.challenge ? '#bc13fe' : '#00f3ff');
         if (STATE.focusBigram) createPopText('FOCUS: ' + STATE.focusBigram.toUpperCase(), canvas.width/2, canvas.height/2 + 50*STATE.sf, '#ffea00');
         if (STATE.wave === 1) createPopText('TYPE THE LETTERS YOU SEE', canvas.width/2, canvas.height/2 + 100*STATE.sf, '#ffffff');
@@ -601,7 +601,7 @@ function spawnWave() {
         let baseWords = Math.min(3, 1 + Math.floor((STATE.wave - 1) / 4)); 
         
         // Only give elite typists a maximum of 1 extra word to prevent screen flooding
-        let wpmBonus = STATE.currentWPM >= 90 ? 1 : 0; 
+        let wpmBonus = (STATE.currentWPM >= 90 && !STATE.daily) ? 1 : 0; 
         
         // Absolute hard cap of 4 words on screen at once
         let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = 4; 
@@ -614,8 +614,28 @@ function spawnWave() {
             STATE.waveFirsts.add(word[0]);
             let wordId = "W" + Date.now() + w;
             for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, wordId));
+            if (w === 0) STATE.goldenId = null;
+            if (w === numWords - 1 && STATE.wave >= 2 && !STATE.challenge && wordRand() < 0.25) spawnUfo();
+            if (STATE.wave >= 3 && !STATE.challenge && w === 0 && wordRand() < 0.6) {
+                STATE.goldenId = wordId; enemies.forEach(e => { if (e.wordId === wordId) e.color = '#ffd700'; });
+                createPopText('GOLDEN WORD: TYPE IT CLEAN FOR A SHIELD', canvas.width/2, canvas.height/2 + 150*STATE.sf, '#ffd700');
+            }
         }
     }
+}
+
+function spawnUfo() {
+    const pool = (DICT_BUCKETS[3] || []).filter(w => [...w].every(ch => STATE.activeKeys[ch]) && !(STATE.waveFirsts && STATE.waveFirsts.has(w[0])));
+    if (!pool.length) return;
+    const word = pool[Math.floor(wordRand() * pool.length)], id = 'U' + Date.now(), right = wordRand() < 0.5, sp = 60 * STATE.sf;
+    const base = right ? -60 * STATE.sf - word.length * sp : canvas.width + 60 * STATE.sf;
+    for (let i = 0; i < word.length; i++) {
+        const e = new SwarmEnemy(word, i, word.length, id);
+        e.state = 'ufo'; e.color = '#bc13fe'; e.y = 70 * STATE.sf; e.x = base + i * sp; e.vx = (right ? 1 : -1) * 1.3 * STATE.sf;
+        enemies.push(e);
+    }
+    STATE.ufoId = id;
+    createPopText('BONUS UFO! NO PENALTY IF IT ESCAPES', canvas.width / 2, canvas.height / 2 + 190 * STATE.sf, '#c77dff');
 }
 
 function updateUI() {
@@ -744,7 +764,7 @@ function gameLoop(time) {
         if(!alive) { STATE.currentTarget = null; } 
     }
 
-    if (enemies.length === 0 && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
+    if (enemies.every(e => e.state === 'ufo') && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
         STATE.currentTarget = null; 
         
         if (STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
@@ -837,7 +857,8 @@ function startGame() {
     STATE.recentErrors = []; STATE.weaponJamTimer = 0;
     
     let taCheckbox = document.getElementById('chk-textassistant');
-    STATE.textAssistantEnabled = taCheckbox ? taCheckbox.checked : false; 
+    STATE.textAssistantEnabled = taCheckbox ? taCheckbox.checked : false; STATE.shield = false; STATE.goldenId = null; STATE.ufoId = null;
+    let dailyChk = document.getElementById('chk-daily'); STATE.daily = !!(dailyChk && dailyChk.checked); if (STATE.daily) initDaily(); 
     STATE.taFadeOutTime = 0;
     
     STATE.hostages = { active: false, keys: [], biogram: '', singleChar: '', progress: 0, required: 5, practiceWords: [] };
@@ -1009,4 +1030,8 @@ document.addEventListener('keydown', (e) => {
         }
     }
     lastKeyPress = now;
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !STATE.active && UI.endScreen && UI.endScreen.style.display === 'flex') { e.preventDefault(); startGame(); }
 });
