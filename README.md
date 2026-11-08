@@ -10,6 +10,7 @@ tractor-beams the two keys involved, and you must type 5 practice words to rescu
 - **Layout-aware:** pick Go60, Glove80, Corne, Voyager or ANSI 60%, or upload a MoErgo/ZMK layout JSON and choose which layer to train.
 - **Bigram stats:** latency and errors are tracked per key pair and saved in your browser (localStorage); nothing leaves your device apart from fetching a word list.
 - **Hand and finger aware:** keys are tagged by hand/finger from the layout; the end screen reports same-finger, same-hand, alternating and thumb bigrams. Same-finger bigrams common in English are pre-flagged as suspects.
+- **Ordered typing:** start a word with its first letter (every word in a wave starts differently), then type it in order; a wrong key is a mistake but keeps your lock. A word dives as one unit.
 - **Targeted waves:** about a third of words contain your weakest (or suspect) bigrams.
 - **Focus and challenge waves:** every third wave is themed on one of your weak bigrams; wave 3, 8, 13... is a no-damage Challenge Stage where a perfect clear pays double.
 - **Feedback:** combo milestones every 25 (EMP charge, hull), BLAZING/CLEAN word bonuses, laser pitch rising with your combo, new background colour each sector, a warning before a boss strikes, and an end-screen readout of your most improved bigram.
