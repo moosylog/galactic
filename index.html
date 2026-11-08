@@ -92,6 +92,9 @@
                         <input type="checkbox" id="chk-textassistant" checked style="width:18px; height:18px; accent-color:var(--neon-blue); margin-right: 10px;"> Persistent Text Assistant (Bottom HUD Helper)
                     </label>
                 </div>
+                <div style="grid-column: 1 / -1; text-align:center; margin-top:6px;">
+                    <label for="chk-daily" style="cursor:pointer; color:#8fa3b8; font-size:0.9rem;"><input type="checkbox" id="chk-daily" style="margin-right:8px"> Daily Challenge (same words for everyone today)</label>
+                </div>
 
                 <div style="grid-column: 1 / -1;">
                     <label>Advanced Custom Layout Override</label>
@@ -122,6 +125,7 @@
                 <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div>
                 <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
                 <div id="end-bigrams" style="margin-top:10px;font-size:0.85rem;color:#8fa3b8"></div>
+                <button id="copy-result" style="margin-top:10px" onclick="navigator.clipboard && navigator.clipboard.writeText(STATE.resultText || ''); this.textContent='COPIED!'; setTimeout(() => this.textContent='COPY RESULT', 1500)">COPY RESULT</button>
             </div>
 
             <div id="heatmap-container">
