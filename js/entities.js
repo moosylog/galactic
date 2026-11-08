@@ -22,9 +22,11 @@ class BossShip {
     
     update(dt, time) {
         if (this.state === 'idle') {
-            if (this.typedIndex !== this.lastIdx) { this.lastIdx = this.typedIndex; this.idleTime = 0; }
+            if (this.typedIndex !== this.lastIdx) { this.lastIdx = this.typedIndex; this.idleTime = 0; this.warned = false; }
             this.idleTime = (this.idleTime || 0) + dt;
-            if (this.idleTime > 4000 + this.word.length * 1200) { this.idleTime = 0; damagePlayer(10); createPopText("BOSS STRIKE!", this.x, this.y + 60 * STATE.sf, '#ff0055'); }
+            const lim = 4000 + this.word.length * 1200;
+            if (this.idleTime > lim * 0.7 && !this.warned) { this.warned = true; createPopText("BOSS CHARGING!", this.x, this.y + 60 * STATE.sf, '#ffea00'); AudioFX.boss(); }
+            if (this.idleTime > lim) { this.idleTime = 0; this.warned = false; damagePlayer(10); createPopText("BOSS STRIKE!", this.x, this.y + 60 * STATE.sf, '#ff0055'); }
         }
         if (this.state === 'enter') {
             this.y += (this.targetY - this.y) * 0.05 * (dt/16);
@@ -142,6 +144,7 @@ class BossShip {
             createPopText("SHIELD FRACTURED! RELEASING KEYS!", canvas.width/2, this.y - (90*STATE.sf), '#00ff66', 0.006);	
             return;
         }
+        enemies.forEach(e => { if (e.isPractice) e.active = false; });
         let pWord = STATE.hostages.practiceWords[STATE.hostages.progress];
         let pId = "PRACTICE_" + Date.now();
         STATE.currentTarget = null;
@@ -342,6 +345,7 @@ class PracticeMissile {
     }
 
     update(dt, time) {
+        if (!this.active) return;
         let dx = this.formX - this.x; let dy = this.formY - this.y;
         let speed = 0.05; 
         this.x += dx * speed * (dt/16); this.y += dy * speed * (dt/16);
@@ -349,8 +353,10 @@ class PracticeMissile {
         
         let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
         if(this.y > splitLine) { 
-            this.active = false; damagePlayer(5); createExplosion(this.x, this.y, this.color); 
-            if(STATE.bossRef) STATE.bossRef.spawnNextPracticeWord();
+            enemies.forEach(e => { if (e.wordId === this.wordId) e.active = false; });
+            if (STATE.currentTarget && STATE.currentTarget.wordId === this.wordId) STATE.currentTarget = null;
+            damagePlayer(5); createExplosion(this.x, this.y, this.color);
+            if (STATE.bossRef) STATE.bossRef.spawnNextPracticeWord();
         }
     }
 

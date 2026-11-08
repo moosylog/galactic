@@ -138,8 +138,38 @@ function updateScoreMultiplier() {
 }
 function showBigramReport() {
     const el = document.getElementById('end-bigrams'); if (!el) return;
-    const cat = {};
-    Object.entries(STATE.bigrams).forEach(([k, b]) => { const t = bigramType(k[0], k[1]); if (!t) return; const c = cat[t] || (cat[t] = { n: 0, ms: 0, err: 0 }); c.n += b.n; c.ms += b.ms; c.err += b.err; });
+    const cat = {}, start = STATE.bigramsStart || {}; let best = null;
+    Object.entries(STATE.bigrams).forEach(([k, b]) => {
+        const t = bigramType(k[0], k[1]);
+        if (t) { const c = cat[t] || (cat[t] = { n: 0, ms: 0, err: 0 }); c.n += b.n; c.ms += b.ms; c.err += b.err; }
+        const s = start[k];
+        if (s && s.n >= 5 && b.n - s.n >= 3 && b.n >= s.n) {
+            const d = s.ms / s.n - (b.ms - s.ms) / (b.n - s.n);
+            if (d >= 20 && (!best || d > best.d)) best = { k, d };
+        }
+    });
     const wb = weakBigrams().slice(0, 5).map(x => x.toUpperCase());
-    el.textContent = (wb.length ? 'FOCUS BIGRAMS: ' + wb.join(', ') + '   ' : '') + Object.entries(cat).map(([t, c]) => `${t.toUpperCase()} ${Math.round(c.ms / Math.max(1, c.n))}ms/${c.err}err`).join('  ');
+    el.textContent = (STATE.newBest ? 'NEW HIGH SCORE!  ' : '') + (best ? 'IMPROVED: ' + best.k.toUpperCase() + ' -' + Math.round(best.d) + 'ms   ' : '')
+        + (wb.length ? 'FOCUS: ' + wb.join(', ') + '   ' : '')
+        + Object.entries(cat).map(([t, c]) => `${t.toUpperCase()} ${Math.round(c.ms / Math.max(1, c.n))}ms/${c.err}err`).join('  ');
+}
+
+const SECTOR_BG = ['#0a0a2a', '#1a0a2e', '#062a2a', '#2a1a06', '#2a0a14'];
+function comboMilestone() {
+    const n = STATE.combo;
+    if (n > 0 && n % 25 === 0) {
+        createPopText(n + 'x COMBO!', canvas.width / 2, canvas.height / 2 - 90 * STATE.sf, '#ffea00');
+        addEmpCharge(15); if (n % 50 === 0) STATE.hull = Math.min(100, STATE.hull + 5);
+        AudioFX.bonus(); updateUI();
+    }
+}
+function wordComplete(t, word, now) {
+    if (!t.full || t.dirty) return;
+    const ms = now - t.t0; if (ms <= 0) return;
+    const wpm = (word.length / 5) / (ms / 60000);
+    STATE.score += 10 * word.length;
+    if (wpm >= Math.max(60, STATE.currentWPM * 1.15)) {
+        STATE.score += 25 * word.length; addEmpCharge(5);
+        createPopText('BLAZING ' + Math.round(wpm) + ' WPM', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00ff66');
+    } else if (word.length >= 5) createPopText('CLEAN', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00f3ff');
 }

@@ -170,7 +170,7 @@ function initAudio() { if (!actx) { actx = new (window.AudioContext || window.we
 const AudioFX = {
     laser: (xRatio) => {
         if(!actx) return; let osc = actx.createOscillator(), gain = actx.createGain(); osc.type = 'square';
-        const basePitch = 300 + (xRatio * 600); osc.frequency.setValueAtTime(basePitch, actx.currentTime); osc.frequency.exponentialRampToValueAtTime(basePitch * 0.2, actx.currentTime + 0.1);
+        const basePitch = 300 + (xRatio * 600) + Math.min(STATE.combo, 40) * 8; osc.frequency.setValueAtTime(basePitch, actx.currentTime); osc.frequency.exponentialRampToValueAtTime(basePitch * 0.2, actx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.05, actx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.1);
         osc.connect(gain); gain.connect(actx.destination); osc.start(); osc.stop(actx.currentTime + 0.1);
     },
@@ -634,6 +634,7 @@ function damagePlayer(amt) {
     if(STATE.hull <= 0) { 
         STATE.active = false; 
         let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0');
+        STATE.newBest = STATE.score > 0 && (STATE.highScores.length === 0 || STATE.score > STATE.highScores[0].score);
         STATE.highScores.push({ score: STATE.score, wave: STATE.wave, date: dateStr });
         STATE.highScores.sort((a,b) => b.score - a.score); STATE.highScores = STATE.highScores.slice(0, 5);
         saveGameData(); renderScoreboard();
@@ -670,7 +671,7 @@ function gameLoop(time) {
 
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
     let spaceGrad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height, 0, bgCanvas.width/2, bgCanvas.height, bgCanvas.height);
-    spaceGrad.addColorStop(0, '#0a0a2a'); spaceGrad.addColorStop(1, '#010103');
+    spaceGrad.addColorStop(0, SECTOR_BG[(STATE.sector - 1) % SECTOR_BG.length]); spaceGrad.addColorStop(1, '#010103');
     bgCtx.fillStyle = spaceGrad; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
 
     let depthMod = 1 + (STATE.combo * 0.02);
@@ -728,7 +729,7 @@ function gameLoop(time) {
         if (STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty].scoreMod;
             let bonus = Math.floor(1000 * STATE.wave * diffScoreMod * (STATE.challenge ? 2 : 1));
-            STATE.score += bonus;
+            STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + 5);
             createPopText(`PERFECT WAVE! +${bonus}`, canvas.width/2, canvas.height/2 - 50, '#00f3ff');
         }
         STATE.waveTotal = 0; STATE.waveCorrect = 0;
@@ -801,7 +802,7 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.suspects = []; computeSuspects();
+    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects();
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
     
@@ -882,7 +883,7 @@ document.addEventListener('keydown', (e) => {
         let matching = enemies.filter(en => !en.isBoss && en.char === inputChar && en.active && !en.targeted);
         if(matching.length > 0) {
             matching.sort((a,b) => b.y - a.y);
-            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index }; startsWord = (targetEnemy.index === 0);
+            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index, t0: now, full: targetEnemy.index === 0, dirty: false }; startsWord = (targetEnemy.index === 0);
         }
     }
 
@@ -906,7 +907,8 @@ document.addEventListener('keydown', (e) => {
             }
             else { 
                 targetEnemy.targeted = true; 
-                STATE.currentTarget.index = targetEnemy.index + 1; 
+                STATE.currentTarget.index = targetEnemy.index + 1;
+                if (!targetEnemy.isPractice && STATE.currentTarget.index >= targetEnemy.word.length) wordComplete(STATE.currentTarget, targetEnemy.word, now); 
                 if (targetEnemy.isPractice && STATE.currentTarget.index >= targetEnemy.word.length) {
                     STATE.hostages.progress++;
                     updateHostageUI();
@@ -923,7 +925,7 @@ document.addEventListener('keydown', (e) => {
         }
         
         if (seqMatched || startsWord || (targetEnemy && targetEnemy.isBoss && targetEnemy.typedIndex > 1) || (targetEnemy && targetEnemy.isPractice) || hitDrone) { 
-            STATE.combo++; if(STATE.combo > STATE.maxCombo) STATE.maxCombo = STATE.combo; 
+            STATE.combo++; if(STATE.combo > STATE.maxCombo) STATE.maxCombo = STATE.combo; comboMilestone(); 
         } else STATE.combo = 0; 
         
         updateScoreMultiplier();
@@ -936,7 +938,7 @@ document.addEventListener('keydown', (e) => {
         if(lastKeyPress > 0 && (now - lastKeyPress) < 2000) { STATE.bioTracker[inputChar].latencies.push(now - lastKeyPress); if(STATE.bioTracker[inputChar].latencies.length > 20) STATE.bioTracker[inputChar].latencies.shift(); }
     
     } else {
-        pushAcc(0); if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
+        pushAcc(0); if (STATE.currentTarget) STATE.currentTarget.dirty = true; if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
         STATE.recentErrors.push(now);
         STATE.recentErrors = STATE.recentErrors.filter(t => now - t < 100);
         
@@ -980,7 +982,7 @@ document.addEventListener('keydown', (e) => {
                 STATE.currentTarget = null;
                 damagePlayer(2);
                 createPopText("PRACTICE RESET!", canvas.width/2, canvas.height/2, '#ff0055');
-                setTimeout(() => { if (STATE.bossRef) STATE.bossRef.spawnNextPracticeWord(); }, 500);
+                if (!STATE.practiceRespawn) { STATE.practiceRespawn = true; setTimeout(() => { STATE.practiceRespawn = false; if (STATE.bossRef && STATE.hostages.active) STATE.bossRef.spawnNextPracticeWord(); }, 500); }
             }
         }
     }
