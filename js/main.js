@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -339,7 +339,7 @@ function buildHUD() {
     let maxX = 0, maxY = 0;
     geo.forEach(k => { if(k.x > maxX) maxX = k.x; if(k.y > maxY) maxY = k.y; });
 
-    let maxHudHeight = Math.min(canvas.height * 0.40, 400 * STATE.sf); 
+    let maxHudHeight = hudHeight(); 
     const u = Math.min((canvas.width * 0.8) / (maxX + 2), maxHudHeight / (maxY + 2));
     const offsetX = (canvas.width - (maxX * u)) / 2; const offsetY = canvas.height - maxHudHeight + (10 * STATE.sf);
 
@@ -363,7 +363,7 @@ function buildHUD() {
 function drawShipHUD(time) {
     ctx.save(); ctx.lineWidth = 2 * STATE.sf; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     
-    let maxHudHeight = Math.min(canvas.height * 0.40, 400 * STATE.sf); 
+    let maxHudHeight = hudHeight(); 
     let splitLine = canvas.height - maxHudHeight;
     ctx.strokeStyle = 'rgba(0, 243, 255, 0.4)'; ctx.lineWidth = 2 * STATE.sf; 
     ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = 'var(--neon-blue)';
@@ -373,6 +373,12 @@ function drawShipHUD(time) {
     gridGrad.addColorStop(0, 'rgba(0, 243, 255, 0.05)'); gridGrad.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = gridGrad; ctx.fillRect(0, splitLine, canvas.width, canvas.height - splitLine);
 
+    const guide = new Set();
+    if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) { const bc = STATE.bossRef.word[STATE.bossRef.typedIndex]; if (bc) guide.add(bc.toLowerCase()); }
+    else if (STATE.currentTarget) { const gn = enemies.find(e => e.wordId === STATE.currentTarget.wordId && e.index === STATE.currentTarget.index && e.active && !e.targeted); if (gn) guide.add(gn.char); }
+    else enemies.forEach(e => { if (!e.isBoss && e.index === 0 && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); });
+    ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
+    ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf); ctx.restore();
     for (let char in STATE.activeKeys) {
         let k = STATE.activeKeys[char];
         if(k.isAbducted) continue; 
@@ -400,6 +406,13 @@ function drawShipHUD(time) {
         ctx.moveTo(k.x - k.w/2 + 6, k.y - k.h/2 + 4); ctx.lineTo(k.x + k.w/2 - 6, k.y - k.h/2 + 4); ctx.stroke();
 
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; let fontSize = Math.max(14, k.h * 0.5); ctx.font = `bold ${fontSize}px 'Share Tech Mono'`; ctx.fillText(char.toUpperCase(), k.x, k.y + (2 * STATE.sf));
+        if (guide.has(char)) {
+            const pulse = 0.6 + 0.4 * Math.sin(time / 180);
+            ctx.save(); ctx.strokeStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 22 * STATE.sf * pulse; ctx.lineWidth = 3 * STATE.sf;
+            ctx.beginPath(); ctx.roundRect(k.x - k.w/2 + 1, k.y - k.h/2 + 1, k.w - 2, k.h - 2, 6 * STATE.sf); ctx.stroke(); ctx.restore();
+        } else if (STATE.focusKeys && STATE.focusKeys.has(char)) {
+            ctx.fillStyle = '#ffea00'; ctx.beginPath(); ctx.arc(k.x + k.w/2 - 7 * STATE.sf, k.y - k.h/2 + 7 * STATE.sf, 3.5 * STATE.sf, 0, 6.283); ctx.fill();
+        }
     }
     
     let now = performance.now();
@@ -605,7 +618,7 @@ function spawnWave() {
         createPopText("BOSS INCOMING! DEFEND YOUR KEYS!", canvas.width/2, canvas.height/2, '#ffea00');
         STATE.taFadeOutTime = performance.now() + 5000; 
     } else {
-        STATE.challenge = (STATE.wave % 5 === 3);
+        STATE.challenge = (STATE.wave % 5 === 3); STATE.focusKeys = focusKeySet();
         if (!STATE.daily && (STATE.challenge || STATE.wave % 3 === 0)) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
         createPopText(STATE.challenge ? 'CHALLENGE STAGE: NO DAMAGE, PERFECT = 2x' : `WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, STATE.challenge ? '#bc13fe' : '#00f3ff');
         if (STATE.focusBigram) createPopText('FOCUS: ' + STATE.focusBigram.toUpperCase(), canvas.width/2, canvas.height/2 + 50*STATE.sf, '#ffea00');
@@ -859,7 +872,7 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects();
+    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true);
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
@@ -1086,3 +1099,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && STATE.active) { e.preventDefault(); STATE.paused ? resumeGame() : pauseGame(); }
 });
 window.addEventListener('blur', () => { if (STATE.active && !STATE.paused) pauseGame(); });
+
+function setKbSize(v) { if (!HUD_FRACS[v]) return; STATE.kbSize = v; try { localStorage.setItem('galactic_kb_size', v); } catch (e) {} }
+(function () {
+    try { const v = localStorage.getItem('galactic_kb_size'); if (v && HUD_FRACS[v]) STATE.kbSize = v; } catch (e) {}
+    const s = document.getElementById('kbSelect'); if (s) s.value = STATE.kbSize;
+})();

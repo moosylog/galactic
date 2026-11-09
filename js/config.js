@@ -243,3 +243,8 @@ function recordRun() {
     STATE.records.recent.unshift(entry);
     STATE.records.recent.length = Math.min(STATE.records.recent.length, 10);
 }
+
+// ---- keyboard panel size (share of the screen height) ----
+const HUD_FRACS = { small: 0.20, compact: 0.28, large: 0.40 };
+function hudHeight() { return Math.min(canvas.height * (HUD_FRACS[STATE.kbSize] || 0.28), 400 * STATE.sf); }
+function focusKeySet() { return new Set(weakBigrams().slice(0, 4).join('').split('')); }

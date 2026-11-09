@@ -351,7 +351,7 @@ class PracticeMissile {
         this.x += dx * speed * (dt/16); this.y += dy * speed * (dt/16);
         this.x += Math.sin(time/200 + this.index) * (2 * STATE.sf);
         
-        let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
+        let splitLine = canvas.height - hudHeight();
         if(this.y > splitLine) { 
             enemies.forEach(e => { if (e.wordId === this.wordId) e.active = false; });
             if (STATE.currentTarget && STATE.currentTarget.wordId === this.wordId) STATE.currentTarget = null;
@@ -458,7 +458,7 @@ class SwarmEnemy {
             this.x += Math.sin(time/100) * (5 * STATE.sf);
         }
 
-        let splitLine = canvas.height - Math.min(canvas.height * 0.40, 400 * STATE.sf);
+        let splitLine = canvas.height - hudHeight();
         if(this.y > splitLine) { this.active = false; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(diff.missDmg); } createExplosion(this.x, this.y, this.color); }
     }
 
