@@ -54,7 +54,7 @@ You can only start a word from its first letter, and you cannot jump between wor
 | **Status bar** | Score, wave/sector, combo, words per minute, accuracy, **HEALTH** and the **EMP** charge bar. |
 | **HEALTH** | Starts at 100%. Shown as ship icons (one per 20%) plus the percentage. Reaching 0 ends the run. |
 | **EMP bar** | Fills as you hit letters and earn bonuses. When full it glows and **Enter** detonates it (see [Waves, bosses and bonuses](#waves-bosses-and-bonuses)). |
-| **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
+| **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Each word also keeps its spot after its neighbours are finished, and when a snake splits. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
 | **Danger line** | The horizontal line above the keyboard. A letter that crosses it costs health. |
 | **Keyboard panel** | Your real layout. See below. |
 | **Pop-up messages** | Short notices such as WAVE, FOCUS, CLEAN, BLAZING, COMBO, BOSS CHARGING, SHIELD READY. |
@@ -94,12 +94,12 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Focus waves.** Every third wave is themed on one of your weak bigrams. The wave announces it ("FOCUS: TH"), and the words contain that pair. In other waves, about a third of the words also contain your weakest or suspected-weak bigrams.
 
-**Centipede waves** (every 4th wave from wave 2: waves 2, 6, 14, 22, 26 and so on; boss and Challenge waves are never Centipede waves). Two words (three from wave 14) crawl down the screen as snakes, zig-zagging across and dropping a row at each edge, and they **speed up with every row**, like the arcade game. Type each one from its **head** (the first letter, ringed in yellow).
+**Centipede waves** (every 4th wave from wave 2: waves 2, 6, 14, 22, 26 and so on; boss and Challenge waves are never Centipede waves). The usual number of words crawl down the screen as snakes, zig-zagging across and dropping a row at each edge, and they **speed up with every row**, like the arcade game. Type each one from its **head** (the first letter, ringed in yellow).
 - **A slip splits the snake.** A wrong key cuts the remaining letters in two: the front part speeds up and the rear part slows down. Each part is now its own shorter word, so you can finish either first.
 - **Mushrooms.** Every snake letter you shoot leaves a pink mushroom. They are harvested when the next wave starts for 20 points each.
 - A letter that reaches the danger line costs health, as in any other wave.
 
-**Challenge Stage** (waves 3, 8, 13, 18 and so on). Four words fly through the screen and leave. Nothing hurts you here: letters that escape cost no health and typos cost nothing. A **perfect clear pays double** the usual perfect-wave bonus.
+**Challenge Stage** (waves 3, 8, 13, 18 and so on). Two words at first (wave 3), three from wave 8 and four from wave 13 fly through the screen and leave. Nothing hurts you here: letters that escape cost no health and typos cost nothing. A **perfect clear pays double** the usual perfect-wave bonus.
 
 **Boss waves** (every 5th wave). One long word, up to 8 letters. Type it cleanly to win.
 - **A wrong key** lets the boss **capture the two keys** involved (the previous and the current letter). They vanish from your keyboard.
@@ -113,7 +113,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Golden word** (from wave 3, not every wave). One word turns gold. Type it with no mistakes for a large bonus and a **shield** that blocks the next letter that would have hurt you.
 
-**Bonus UFO** (from wave 2, occasionally). A purple three-letter word glides across the top. It is **optional and never listed in the word helper**. Type its first letter and finish it for +300 and EMP charge. If it escapes, nothing happens.
+**Bonus UFO** (from wave 4, occasionally, never in Centipede or Challenge waves). A purple three-letter word glides across the top. It is **optional and never listed in the word helper**. Type its first letter and finish it for +300 and EMP charge. If it escapes, nothing happens.
 
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
 
@@ -157,7 +157,7 @@ Scores are only comparable within the same difficulty.
 | **Contender** | 4 to 7 | About 4 s | ×2 | Common words, widening faster. |
 | **Apex** | 5 to 8 | About 1.5 s | ×3 | A wide pool from the start. |
 
-On every level words get **one letter longer every 5 waves** (up to two extra, capped at 8), letters fall faster as you play, and the speed also follows your typing speed.
+On every level on **Apex** words get one letter longer every 8 waves (up to two extra, capped at 8), and on every level rarer words are mixed in as waves progress, letters fall faster as you play, and the speed also follows your typing speed.
 
 ---
 
