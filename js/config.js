@@ -248,3 +248,9 @@ function recordRun() {
 const HUD_FRACS = { small: 0.20, compact: 0.28, large: 0.40 };
 function hudHeight() { return Math.min(canvas.height * (HUD_FRACS[STATE.kbSize] || 0.28), 400 * STATE.sf); }
 function focusKeySet() { return new Set(weakBigrams().slice(0, 4).join('').split('')); }
+
+// Mushrooms left by shot snake letters are harvested when the next wave starts.
+function harvestMushrooms() {
+    const n = STATE.mushrooms.length; STATE.mushrooms = [];
+    if (n > 0) { STATE.score += n * 20; createPopText('MUSHROOM HARVEST +' + (n * 20), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#ff5fb3'); updateUI(); }
+}

@@ -397,7 +397,7 @@ class SwarmEnemy {
         
         let hsh = 0; for (const ch of String(this.wordId)) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
         const slot = STATE.slot || 0, n = totalInWord, mid = (n - 1) / 2;
-        this.pattern = (hsh + slot * 2) % 6;
+        this.pattern = (hsh + slot * 2) % 6; this.slot = slot;
         const shape = [0, Math.abs(index - mid) * 16, -Math.sin(Math.PI * index / Math.max(1, n - 1)) * 28, Math.sin(index * 1.2) * 20][(hsh >>> 3) % 4];
         this.formX += (slot % 2 === 0 ? -1 : 1) * 60 * STATE.sf;
         this.formY = ((STATE.challenge ? 90 + slot * 55 : 110 + slot * 70) + shape) * STATE.sf;
@@ -448,6 +448,7 @@ class SwarmEnemy {
             if (enemies.length <= 8) diveChance += diff.rush;
             if (this.hoverT > diff.grace && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
         }
+        else if (this.state === 'snake') { /* position is driven by updateSnakes() */ }
         else if (this.state === 'fly') {
             this.y += 0.5 * STATE.sf * (dt/16); this.x += Math.sin(time/450 + this.index) * 1.2 * STATE.sf * (dt/16);
         }
@@ -459,7 +460,7 @@ class SwarmEnemy {
         }
 
         let splitLine = canvas.height - hudHeight();
-        if(this.y > splitLine) { this.active = false; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(diff.missDmg); } createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; this.crossed = true; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(diff.missDmg); } createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {
@@ -634,4 +635,74 @@ class RescueParticle {
         this.x += (dx/dist) * this.speed * (dt/16); this.y += (dy/dist) * this.speed * (dt/16);
     }
     draw(ctx) { ctx.save(); ctx.fillStyle = this.color; ctx.shadowBlur = 30 * STATE.sf; ctx.shadowColor = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, 10 * STATE.sf, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+// ---- Centipede-style snakes: a word crawls down the screen in a zig-zag, speeds up every row, and splits when you slip ----
+let snakes = [], SNAKE_SPLITS = 0;
+const SNAKE_SPACING = 52;
+function snakeGeom() {
+    const sf = STATE.sf, W = canvas.width, L = Math.min(W - 100 * sf, 760 * sf);
+    return { sf, L, m: (W - L) / 2, rowH: 62 * sf, y0: 55 * sf, P: L + 62 * sf };
+}
+function snakePos(right, d) {
+    const g = snakeGeom();
+    if (d < 0) return { x: right ? g.m + d : g.m + g.L - d, y: g.y0 };
+    const r = Math.floor(d / g.P), rem = d - r * g.P, rowRight = (r % 2 === 0) === right;
+    if (rem < g.L) return { x: rowRight ? g.m + rem : g.m + g.L - rem, y: g.y0 + r * g.rowH };
+    return { x: rowRight ? g.m + g.L : g.m, y: g.y0 + r * g.rowH + (rem - g.L) };
+}
+class Snake {
+    constructor(letters, right, d, mul = 1) { this.letters = letters; this.right = right; this.d = d; this.mul = mul; }
+    alive() { return this.letters.filter(l => l.active && enemies.indexOf(l) >= 0); }
+}
+function startSnake(letters, k) {
+    const sp = SNAKE_SPACING * STATE.sf, n = letters.length;
+    const s = new Snake(letters, k % 2 === 0, -(n * sp + 60 * STATE.sf) - k * (n * sp + 220 * STATE.sf));
+    letters.forEach(e => { e.state = 'snake'; e.snake = s; e.snakeSlot = e.index; });
+    snakes.push(s);
+}
+function addMushroom(x, y) { if (STATE.mushrooms.length < 40) STATE.mushrooms.push({ x, y }); }
+function updateSnakes(dt) {
+    const g = snakeGeom(), sp = SNAKE_SPACING * g.sf, base = ({ academy: 130, contender: 170, apex: 230 })[STATE.difficulty || 'contender'] * g.sf;
+    for (let i = snakes.length - 1; i >= 0; i--) {
+        const s = snakes[i], alive = s.alive();
+        s.letters.forEach(l => { if (!l.active && !l.crossed && !l.mush) { l.mush = true; addMushroom(l.x, l.y); } });
+        s.letters = alive;
+        if (alive.length === 0) { snakes.splice(i, 1); continue; }
+        const row = Math.max(0, Math.floor(s.d / g.P));
+        s.d += base * s.mul * (1 + 0.10 * row) * (dt / 1000);
+        alive.forEach(l => { const p = snakePos(s.right, s.d - l.snakeSlot * sp); l.x = p.x; l.y = p.y; });
+    }
+}
+function drawSnakes(ctx, time) {
+    snakes.forEach(s => {
+        const a = s.letters.slice().sort((p, q) => p.snakeSlot - q.snakeSlot);
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = 6 * STATE.sf; ctx.strokeStyle = 'rgba(122,255,176,0.45)';
+        for (let i = 0; i + 1 < a.length; i++) if (a[i + 1].snakeSlot - a[i].snakeSlot === 1) { ctx.beginPath(); ctx.moveTo(a[i].x, a[i].y); ctx.lineTo(a[i + 1].x, a[i + 1].y); ctx.stroke(); }
+        if (a[0]) { ctx.strokeStyle = '#ffea00'; ctx.lineWidth = 3 * STATE.sf; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(time / 150); ctx.beginPath(); ctx.arc(a[0].x, a[0].y, 28 * STATE.sf, 0, 6.283); ctx.stroke(); }
+        ctx.restore();
+    });
+}
+function drawMushrooms(ctx) {
+    STATE.mushrooms.forEach(m => {
+        const r = 11 * STATE.sf; ctx.save();
+        ctx.fillStyle = '#f4e9d8'; ctx.fillRect(m.x - r * 0.3, m.y, r * 0.6, r * 0.9);
+        ctx.fillStyle = '#ff5fb3'; ctx.beginPath(); ctx.arc(m.x, m.y, r, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(m.x - r * 0.35, m.y - r * 0.4, r * 0.18, 0, 6.283); ctx.fill();
+        ctx.restore();
+    });
+}
+// A slip while locked on a snake cuts it in two: the front keeps going faster, the rear slows down.
+function splitSnake(wordId) {
+    const s = snakes.find(sn => sn.letters.some(l => l.wordId === wordId));
+    if (!s) return;
+    const rem = s.alive().filter(l => l.wordId === wordId).sort((a, b) => a.index - b.index);
+    if (rem.length < 4) return;
+    const m = Math.ceil(rem.length / 2), head = rem.slice(0, m), tail = rem.slice(m);
+    const cut = rem[0].word.slice(0, tail[0].index), tailWord = tail.map(l => l.char).join(''), newId = wordId + 's' + (++SNAKE_SPLITS);
+    head.forEach(l => { l.word = cut; });
+    tail.forEach((l, j) => { l.wordId = newId; l.word = tailWord; l.index = j; });
+    s.letters = s.letters.filter(l => tail.indexOf(l) < 0); s.mul = 1.25;
+    snakes.push(new Snake(tail, s.right, s.d, 0.7));
+    createPopText('SPLIT!', tail[0].x, tail[0].y - 30 * STATE.sf, '#ffea00');
 }

@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', focusKeys: new Set(), stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -433,7 +433,7 @@ function drawShipHUD(time) {
         enemies.forEach(e => {
             if (e && !e.isBoss && !e.isPractice && e.word) {
                 if (!wordsMap[e.wordId]) {
-                    wordsMap[e.wordId] = { id: e.wordId, isBoss: false, word: e.word, typed: 0, y: e.y, index: e.index };
+                    wordsMap[e.wordId] = { id: e.wordId, isBoss: false, word: e.word, typed: 0, y: e.y, index: e.index, slot: e.slot || 0 };
                 } else if (e.index < wordsMap[e.wordId].index) {
                     wordsMap[e.wordId].y = e.y;
                 }
@@ -444,68 +444,32 @@ function drawShipHUD(time) {
             wordsMap[STATE.currentTarget.wordId].typed = STATE.currentTarget.index;
         }
 
-        let wordList = Object.values(wordsMap).sort((a,b) => b.y - a.y); 
-        
-        if (STATE.currentTarget && wordsMap[STATE.currentTarget.wordId]) {
-            let activeIdx = wordList.findIndex(w => w.id === STATE.currentTarget.wordId);
-            if (activeIdx > 0) {
-                let activeObj = wordList.splice(activeIdx, 1)[0];
-                wordList.unshift(activeObj);
-            }
-        }
-        
+        let wordList = Object.values(wordsMap).filter(w => w.id !== STATE.ufoId).sort((a, b) => (a.slot - b.slot) || (a.id < b.id ? -1 : 1));
         if (wordList.length > 0) {
-            let locked = !!(STATE.currentTarget && wordsMap[STATE.currentTarget.wordId]);
-            let current = locked ? wordList[0] : null;
-            let others = (locked ? wordList.slice(1) : wordList).filter(w => w.id !== STATE.ufoId);
-
-            let anchorY = canvas.height - maxHudHeight - (90 * STATE.sf);
-            let fSize = Math.floor(45 * STATE.sf); 
-            ctx.font = `800 ${fSize}px 'Oxanium'`;
-            
-            if (current && current.word) {
-                let fullW = ctx.measureText(current.word.toUpperCase()).width;
-                let startX = (canvas.width / 2) - (fullW / 2);
-                
-                for(let i=0; i<current.word.length; i++) {
-                    let char = current.word[i] ? current.word[i].toUpperCase() : "";
-                    let cw = ctx.measureText(char).width;
-                    if (i < current.typed) {
-                        ctx.fillStyle = 'rgba(0, 255, 102, 0.4)'; 
-                        ctx.shadowBlur = 0;
-                    } else if (i === current.typed) {
-                        ctx.fillStyle = '#00ff66'; 
-                        ctx.shadowBlur = 20 * STATE.sf; ctx.shadowColor = '#00ff66';
-                    } else {
-                        ctx.fillStyle = 'rgba(255,255,255,0.9)'; 
-                        ctx.shadowBlur = 0;
-                    }
-                    ctx.fillText(char, startX + cw/2, anchorY);
-                    startX += cw;
+            const locked = !!(STATE.currentTarget && wordsMap[STATE.currentTarget.wordId]);
+            const anchorY = canvas.height - maxHudHeight - (70 * STATE.sf);
+            let fSize = Math.floor(40 * STATE.sf), gap = 44 * STATE.sf;
+            const rowWidth = () => { ctx.font = `800 ${fSize}px 'Oxanium'`; return wordList.reduce((a, w) => a + ctx.measureText(w.word.toUpperCase()).width, 0) + gap * (wordList.length - 1); };
+            while (fSize > 14 && rowWidth() > canvas.width * 0.94) { fSize -= 2; gap *= 0.95; }
+            let x = canvas.width / 2 - rowWidth() / 2;
+            wordList.forEach(w => {
+                const mine = locked && w.id === STATE.currentTarget.wordId, gold = w.id === STATE.goldenId;
+                const ww = ctx.measureText(w.word.toUpperCase()).width;
+                if (mine) { ctx.save(); ctx.strokeStyle = '#00ff66'; ctx.shadowColor = '#00ff66'; ctx.shadowBlur = 14 * STATE.sf; ctx.lineWidth = 2 * STATE.sf; ctx.beginPath(); ctx.roundRect(x - 8 * STATE.sf, anchorY - fSize * 0.7, ww + 16 * STATE.sf, fSize * 1.4, 8 * STATE.sf); ctx.stroke(); ctx.restore(); }
+                for (let q = 0; q < w.word.length; q++) {
+                    const ch = w.word[q].toUpperCase(), cw = ctx.measureText(ch).width;
+                    ctx.shadowBlur = 0;
+                    if (mine && q < w.typed) ctx.fillStyle = 'rgba(0,255,102,0.35)';
+                    else if (mine && q === w.typed) { ctx.fillStyle = '#00ff66'; ctx.shadowBlur = 18 * STATE.sf; ctx.shadowColor = '#00ff66'; }
+                    else if (!locked && q === 0) ctx.fillStyle = gold ? '#ffd700' : '#00ff66';
+                    else ctx.fillStyle = gold ? '#ffd700' : (locked && !mine ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.92)');
+                    ctx.fillText(ch, x + cw / 2, anchorY); x += cw;
                 }
-            }
-            
-            ctx.shadowBlur = 0;
-            if (!locked && others.length) {
-                ctx.font = `800 ${Math.floor(34 * STATE.sf)}px 'Oxanium'`;
-                let gap = 40 * STATE.sf;
-                let total = others.reduce((a, w) => a + ctx.measureText(w.word.toUpperCase()).width, 0) + gap * (others.length - 1);
-                let x = canvas.width / 2 - total / 2;
-                others.forEach(w => {
-                    for (let q = 0; q < w.word.length; q++) {
-                        let ch = w.word[q].toUpperCase(), cw = ctx.measureText(ch).width;
-                        ctx.fillStyle = w.id === STATE.ufoId ? '#c77dff' : w.id === STATE.goldenId ? '#ffd700' : (q === 0 ? '#00ff66' : 'rgba(255,255,255,0.9)');
-                        ctx.fillText(ch, x + cw / 2, anchorY); x += cw;
-                    }
-                    x += gap;
-                });
-                ctx.font = `800 ${Math.floor(16 * STATE.sf)}px 'Oxanium'`;
-                ctx.fillStyle = 'rgba(255,255,255,0.45)';
-                ctx.fillText('TYPE THE FIRST LETTER OF A WORD', canvas.width / 2, anchorY + 40 * STATE.sf);
-            } else if (locked && others.length) {
-                ctx.font = `800 ${Math.floor(20 * STATE.sf)}px 'Oxanium'`;
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.fillText(others.map(w => w.word.toUpperCase()).join('    '), canvas.width / 2, anchorY + 35 * STATE.sf);
+                ctx.shadowBlur = 0; x += gap;
+            });
+            if (!locked) {
+                ctx.font = `800 ${Math.floor(16 * STATE.sf)}px 'Oxanium'`; ctx.fillStyle = 'rgba(255,255,255,0.45)';
+                ctx.fillText('TYPE THE FIRST LETTER OF A WORD', canvas.width / 2, anchorY + 38 * STATE.sf);
             }
         }
         ctx.restore();
@@ -604,11 +568,12 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
 }
 
 function spawnWave() {
+    harvestMushrooms();
     if (STATE.hostages.active) return; 
     
     STATE.currentTarget = null; STATE.isSpawning = false;
     let isBossWave = (STATE.wave > 0 && STATE.wave % 5 === 0);
-    STATE.challenge = false; STATE.focusBigram = null;
+    STATE.challenge = false; STATE.focusBigram = null; STATE.snakeWave = false;
     
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
@@ -619,9 +584,11 @@ function spawnWave() {
         STATE.taFadeOutTime = performance.now() + 5000; 
     } else {
         STATE.challenge = (STATE.wave % 5 === 3); STATE.focusKeys = focusKeySet();
+        STATE.snakeWave = (STATE.wave % 4 === 2 && !STATE.challenge);
         if (!STATE.daily && (STATE.challenge || STATE.wave % 3 === 0)) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
         createPopText(STATE.challenge ? 'CHALLENGE STAGE: NO DAMAGE, PERFECT = 2x' : `WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, STATE.challenge ? '#bc13fe' : '#00f3ff');
         if (STATE.focusBigram) createPopText('FOCUS: ' + STATE.focusBigram.toUpperCase(), canvas.width/2, canvas.height/2 + 50*STATE.sf, '#ffea00');
+        if (STATE.snakeWave) createPopText('CENTIPEDE! TYPE IT FROM THE HEAD', canvas.width/2, canvas.height/2 + 100*STATE.sf, '#7affb0');
         if (STATE.wave === 1) createPopText('TYPE THE LETTERS YOU SEE', canvas.width/2, canvas.height/2 + 100*STATE.sf, '#ffffff');
         
         // TOURNAMENT PACING: Tighter board, less visual clutter
@@ -632,7 +599,7 @@ function spawnWave() {
         let wpmBonus = (STATE.currentWPM >= 90 && !STATE.daily) ? 1 : 0; 
         
         // Absolute hard cap of 4 words on screen at once
-        let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = 4; 
+        let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = 4; if (STATE.snakeWave) numWords = STATE.wave >= 14 ? 3 : 2; 
         
         STATE.taFadeOutTime = performance.now() + DATA.DIFFICULTY[STATE.difficulty || 'contender'].hold + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
@@ -642,7 +609,9 @@ function spawnWave() {
             for (let tries = 0; tries < 12 && STATE.waveFirsts.has(word[0]); tries++) word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             STATE.waveFirsts.add(word[0]);
             let wordId = "W" + Date.now() + w;
-            for(let i=0; i<word.length; i++) enemies.push(new SwarmEnemy(word, i, word.length, wordId));
+            const letters = [];
+            for (let i = 0; i < word.length; i++) { const e = new SwarmEnemy(word, i, word.length, wordId); enemies.push(e); letters.push(e); }
+            if (STATE.snakeWave) startSnake(letters, w);
             if (w === 0) STATE.goldenId = null;
             if (w === numWords - 1 && STATE.wave >= 2 && !STATE.challenge && wordRand() < 0.25) spawnUfo();
             if (STATE.wave >= 3 && !STATE.challenge && w === 0 && wordRand() < 0.6) {
@@ -841,6 +810,7 @@ function gameLoop(time) {
             }
         }
 
+        updateSnakes(dt); drawSnakes(ctx, time); drawMushrooms(ctx);
         for(let i=enemies.length-1; i>=0; i--) { if(!enemies[i].active) enemies.splice(i, 1); else { enemies[i].update(dt, time); enemies[i].draw(ctx, dt); } }
         for(let i=bonusDrones.length-1; i>=0; i--) { if(!bonusDrones[i].active) bonusDrones.splice(i, 1); else { bonusDrones[i].update(dt); bonusDrones[i].draw(ctx); } }
         for(let i=lasers.length-1; i>=0; i--) { if(!lasers[i].active) lasers.splice(i, 1); else { lasers[i].update(dt); lasers[i].draw(ctx); } }
@@ -873,7 +843,7 @@ function gameLoop(time) {
 
 function startGame() {
     initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
-    STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true);
+    STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = [];
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
@@ -1012,7 +982,7 @@ document.addEventListener('keydown', (e) => {
         if(lastKeyPress > 0 && (now - lastKeyPress) < 2000) { STATE.bioTracker[inputChar].latencies.push(now - lastKeyPress); if(STATE.bioTracker[inputChar].latencies.length > 20) STATE.bioTracker[inputChar].latencies.shift(); }
     
     } else {
-        pushAcc(0); if (STATE.currentTarget) STATE.currentTarget.dirty = true; if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
+        pushAcc(0); if (STATE.currentTarget) { STATE.currentTarget.dirty = true; splitSnake(STATE.currentTarget.wordId); } if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
         STATE.recentErrors.push(now);
         STATE.recentErrors = STATE.recentErrors.filter(t => now - t < 100);
         
@@ -1088,7 +1058,7 @@ function exitToMenu() {
     if (!wasPaused) pauseGame();
     if (!confirm('Exit to the main screen? This run ends without a score and cannot be resumed.')) { if (!wasPaused) resumeGame(); return; }
     STATE.active = false; STATE.paused = false; STATE.runId = (STATE.runId || 0) + 1;
-    enemies = []; STATE.bossRef = null; STATE.currentTarget = null;
+    enemies = []; snakes = []; STATE.mushrooms = []; STATE.bossRef = null; STATE.currentTarget = null;
     setControls(false);
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
     if (UI.hostageCave) UI.hostageCave.style.display = 'none';
