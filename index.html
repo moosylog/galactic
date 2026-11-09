@@ -28,7 +28,7 @@
         </div>
 
         <div class="hud-group">
-            <div class="hud-item"><span class="hud-lbl">HULL</span><span class="hud-val highlight-green" id="ui-health">100%</span></div>
+            <div class="hud-item"><span class="hud-lbl">HEALTH</span><span class="hud-val highlight-green" id="ui-health">100%</span></div>
             <div id="emp-container">
                 <div id="emp-fill"></div>
                 <div id="emp-text">ENTER EMP</div>
@@ -53,7 +53,7 @@
             <h1>GALACTIC<br><span>KEYSTROKE</span></h1>
             
             <div class="scoreboard-container" id="scoreboard-container">
-                <div class="scoreboard-title">TOP 5 HALL OF FAME</div>
+                <div class="scoreboard-title">HALL OF FAME</div>
                 <div id="highScoreList"></div>
             </div>
             
@@ -86,15 +86,6 @@
                         <option value="custom" disabled hidden>Custom JSON Loaded</option>
                     </select>
                 </div>
-                
-                <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 10px; background: rgba(0,243,255,0.05); padding: 15px; border-radius: 4px; border: 1px dashed rgba(0,243,255,0.3);">
-                    <label for="chk-textassistant" style="cursor:pointer; color:#fff; font-size:1rem;">
-                        <input type="checkbox" id="chk-textassistant" checked style="width:18px; height:18px; accent-color:var(--neon-blue); margin-right: 10px;"> Persistent Text Assistant (Bottom HUD Helper)
-                    </label>
-                </div>
-                <div style="grid-column: 1 / -1; text-align:center; margin-top:6px;">
-                    <label for="chk-daily" style="cursor:pointer; color:#8fa3b8; font-size:0.9rem;"><input type="checkbox" id="chk-daily" style="margin-right:8px"> Daily Challenge (same words for everyone today)</label>
-                </div>
 
                 <div style="grid-column: 1 / -1;">
                     <label>Advanced Custom Layout Override</label>
@@ -125,15 +116,15 @@
                 <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div>
                 <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
                 <div id="end-bigrams" style="margin-top:10px;font-size:0.85rem;color:#8fa3b8"></div>
-                <button id="copy-result" style="margin-top:10px" onclick="navigator.clipboard && navigator.clipboard.writeText(STATE.resultText || ''); this.textContent='COPIED!'; setTimeout(() => this.textContent='COPY RESULT', 1500)">COPY RESULT</button>
             </div>
 
+            <div id="end-keys" style="margin:0 0 14px; font-family:'Share Tech Mono',monospace; font-size:1rem; line-height:1.7; color:#cfe8ff"></div>
             <div id="heatmap-container">
-                <div class="scoreboard-title" style="margin-top: 15px; margin-bottom: 10px;">PHYSICAL BIOMETRIC HEATMAP</div>
+                <div class="scoreboard-title" style="margin-top: 15px; margin-bottom: 10px;">KEYBOARD HEATMAP</div>
                 <div style="color: #888; font-size: 0.8rem; margin-bottom: 10px; font-family: 'Share Tech Mono';">
                     <span style="color: var(--neon-blue);">■ FAST/ACCURATE</span> &nbsp;&nbsp;&nbsp;&nbsp; <span style="color: var(--neon-pink);">■ SLOW/ERROR-PRONE</span>
                 </div>
-                <canvas id="heatmap-canvas" width="800" height="300" style="width:100%; max-height:300px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid rgba(255,0,85,0.3); box-shadow: inset 0 0 20px rgba(0,0,0,0.8);"></canvas>
+                <canvas id="heatmap-canvas" width="800" height="300" style="display:block; margin:0 auto; width:auto; max-width:100%; height:auto; max-height:220px; background: rgba(0,0,0,0.5); border-radius: 8px; border: 1px solid rgba(255,0,85,0.3);"></canvas>
             </div>
             
             <button class="btn-action btn-danger" onclick="resetToMenu()" style="margin-top: 20px;">REBOOT PROTOCOL</button>
@@ -144,6 +135,18 @@
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/main.js"></script>
-<div id="copyright" style="position:fixed;bottom:4px;right:8px;font:11px 'Share Tech Mono',monospace;color:#4a5c70;z-index:5;pointer-events:none">© 2026 Moosy Research. All rights reserved.</div>
+<div id="game-controls" style="position:fixed;bottom:6px;left:8px;z-index:20;display:none;gap:8px">
+        <button class="ctl" id="btn-pause" onclick="pauseGame()">PAUSE (ESC)</button>
+        <button class="ctl" id="btn-exit" onclick="exitToMenu()">EXIT</button>
+    </div>
+    <div id="pause-screen" class="overlay-screen" style="display:none">
+        <div class="menu-box" style="text-align:center">
+            <h1>PAUSED</h1>
+            <p style="color:#8fa3b8;font-family:'Share Tech Mono',monospace">Exiting ends this run. It cannot be resumed.</p>
+            <button class="btn-action" onclick="resumeGame()">RESUME</button>
+            <button class="btn-action btn-danger" style="margin-top:12px" onclick="exitToMenu()">EXIT TO MAIN SCREEN</button>
+        </div>
+    </div>
+    <div id="copyright" style="position:fixed;bottom:4px;right:8px;font:11px 'Share Tech Mono',monospace;color:#4a5c70;z-index:5;pointer-events:none">© 2026 Moosy Research. All rights reserved.</div>
 </body>
 </html>
