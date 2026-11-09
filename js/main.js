@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -67,7 +67,8 @@ function loadGameData() {
         const save = JSON.parse(localStorage.getItem('galactic_keystroke_save'));
         if (save) {
             if (save.version !== CURRENT_VERSION) throw new Error("Outdated cache version");
-            if (save.highScores && Array.isArray(save.highScores)) STATE.highScores = save.highScores;
+            if (save.records && Array.isArray(save.records.recent)) STATE.records = { best: save.records.best || null, recent: save.records.recent.slice(0, 10) };
+            else if (Array.isArray(save.highScores) && save.highScores.length) STATE.records = { best: save.highScores.slice().sort((a, b) => b.score - a.score)[0], recent: [] };
             if (save.bigrams && typeof save.bigrams === "object") STATE.bigrams = save.bigrams;
             if (save.isCustom) {
                 if (!Array.isArray(save.customArray)) throw new Error("Corrupted custom array");
@@ -93,7 +94,7 @@ function loadGameData() {
 function saveGameData() {
     try {
         const payload = {
-            version: CURRENT_VERSION, highScores: STATE.highScores, bigrams: STATE.bigrams,
+            version: CURRENT_VERSION, records: STATE.records, bigrams: STATE.bigrams,
             baseHardware: UI.hwSelect.value, layout: UI.layoutSelect.value,
             customArray: customLayoutArray, isCustom: UI.layoutSelect.value === 'custom'
         };
@@ -101,15 +102,25 @@ function saveGameData() {
     } catch (e) {}
 }
 
+function fmtWhen(e) {
+    if (!e.t) return e.date || '';
+    const d = new Date(e.t), p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function scoreRow(e) {
+    const mins = e.dur ? Math.floor(e.dur / 60) + ':' + String(e.dur % 60).padStart(2, '0') : '';
+    const keys = (e.keys && e.keys.length) ? e.keys.map(k => k.toUpperCase()).join(', ') : 'NONE YET';
+    const sub = 'font-size:0.8rem;color:#8fa3b8;margin-top:3px;line-height:1.4';
+    return `<div class="score-item"><div class="score-info"><div>${fmtWhen(e)}${mins ? ' &middot; PLAYED ' + mins : ''}</div><div style="${sub}">DIFFICULTY: <b style="color:#fff">${e.diff ? String(e.diff).toUpperCase() : '-'}</b> &middot; WAVE ${e.wave}</div><div style="${sub}">TOP 5 PROBLEM KEYS: <b style="color:#fff">${keys}</b></div></div><div class="score-val">${String(e.score).padStart(6, '0')}</div></div>`;
+}
 function renderScoreboard() {
-    UI.highScoreList.innerHTML = '';
-    if (STATE.highScores.length === 0) {
-        UI.highScoreList.innerHTML = '<div style="color: #4a5c70; font-size: 0.9rem; text-align: center; font-family:\'Share Tech Mono\'">NO RECORDS FOUND IN ARCHIVE</div>';
-        return;
+    const r = STATE.records; let html = '';
+    if (!r.best && r.recent.length === 0) html = '<div style="color: #4a5c70; font-size: 0.9rem; text-align: center; font-family:\'Share Tech Mono\'">NO RECORDS FOUND IN ARCHIVE</div>';
+    else {
+        if (r.best) html += '<div style="color:#ffea00;font-size:0.75rem;letter-spacing:3px;margin-bottom:6px">ALL-TIME HIGH</div>' + scoreRow(r.best);
+        if (r.recent.length) html += '<div style="color:#00f3ff;font-size:0.75rem;letter-spacing:3px;margin:14px 0 6px">LAST 10 RUNS</div>' + r.recent.map(scoreRow).join('');
     }
-    STATE.highScores.forEach((entry) => {
-        UI.highScoreList.innerHTML += `<div class="score-item"><div class="score-info">${entry.date} <span class="lvl">(WAVE ${entry.wave})</span></div><div class="score-val">${String(entry.score).padStart(6,'0')}</div></div>`;
-    });
+    UI.highScoreList.innerHTML = html;
 }
 
 function factoryReset() {
@@ -433,9 +444,9 @@ function drawShipHUD(time) {
         if (wordList.length > 0) {
             let locked = !!(STATE.currentTarget && wordsMap[STATE.currentTarget.wordId]);
             let current = locked ? wordList[0] : null;
-            let others = locked ? wordList.slice(1) : wordList;
+            let others = (locked ? wordList.slice(1) : wordList).filter(w => w.id !== STATE.ufoId);
 
-            let anchorY = canvas.height - maxHudHeight - (40 * STATE.sf);
+            let anchorY = canvas.height - maxHudHeight - (90 * STATE.sf);
             let fSize = Math.floor(45 * STATE.sf); 
             ctx.font = `800 ${fSize}px 'Oxanium'`;
             
@@ -462,7 +473,7 @@ function drawShipHUD(time) {
             }
             
             ctx.shadowBlur = 0;
-            if (!locked) {
+            if (!locked && others.length) {
                 ctx.font = `800 ${Math.floor(34 * STATE.sf)}px 'Oxanium'`;
                 let gap = 40 * STATE.sf;
                 let total = others.reduce((a, w) => a + ctx.measureText(w.word.toUpperCase()).width, 0) + gap * (others.length - 1);
@@ -478,7 +489,7 @@ function drawShipHUD(time) {
                 ctx.font = `800 ${Math.floor(16 * STATE.sf)}px 'Oxanium'`;
                 ctx.fillStyle = 'rgba(255,255,255,0.45)';
                 ctx.fillText('TYPE THE FIRST LETTER OF A WORD', canvas.width / 2, anchorY + 40 * STATE.sf);
-            } else if (others.length) {
+            } else if (locked && others.length) {
                 ctx.font = `800 ${Math.floor(20 * STATE.sf)}px 'Oxanium'`;
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 ctx.fillText(others.map(w => w.word.toUpperCase()).join('    '), canvas.width / 2, anchorY + 35 * STATE.sf);
@@ -551,13 +562,17 @@ function drawHeatmap() {
 
 function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let diff = DATA.DIFFICULTY[STATE.difficulty];
-    let minLen = diff.minLen, maxLen = diff.maxLen;
+    let boost = Math.min(2, Math.floor(((STATE.wave || 1) - 1) / 5));
+    let minLen = Math.min(8, diff.minLen + boost), maxLen = Math.min(8, diff.maxLen + boost);
     if (isBoss) { minLen = Math.min(8, minLen + 2); maxLen = Math.min(8, maxLen + 2); }
     let len = minLen + Math.floor(wordRand() * (maxLen - minLen + 1));
     let bucket = [];
     for (let d = 0; d < 6 && bucket.length === 0; d++) bucket = DICT_BUCKETS[len - d] || DICT_BUCKETS[len + d] || [];
     const typable = w => [...w].every(ch => STATE.activeKeys[ch]);
-    let pool = bucket.filter(w => typable(w) && !STATE.stolenKeys.some(mk => w.includes(mk)));
+    const free = w => typable(w) && !STATE.stolenKeys.some(mk => w.includes(mk));
+    const lim = rankLimit(), plain = STATE.difficulty === 'academy' ? (w => !/[qxzj]/.test(w)) : (() => true);
+    let pool = bucket.filter(w => free(w) && WORD_RANK[w] < lim && plain(w));
+    if (pool.length < 8) pool = bucket.filter(free);
     if (pool.length === 0) pool = DATA.DICTIONARY.filter(typable);
     if (pool.length === 0) return "the";
     if (forceBigram) {
@@ -609,6 +624,7 @@ function spawnWave() {
         STATE.taFadeOutTime = performance.now() + DATA.DIFFICULTY[STATE.difficulty || 'contender'].hold + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
             if (w === 0) STATE.waveFirsts = new Set();
+            STATE.slot = w;
             let word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             for (let tries = 0; tries < 12 && STATE.waveFirsts.has(word[0]); tries++) word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             STATE.waveFirsts.add(word[0]);
@@ -625,7 +641,7 @@ function spawnWave() {
 }
 
 function spawnUfo() {
-    const pool = (DICT_BUCKETS[3] || []).filter(w => [...w].every(ch => STATE.activeKeys[ch]) && !(STATE.waveFirsts && STATE.waveFirsts.has(w[0])));
+    const pool = (DICT_BUCKETS[3] || []).filter(w => WORD_RANK[w] < 3000 && [...w].every(ch => STATE.activeKeys[ch]) && !(STATE.waveFirsts && STATE.waveFirsts.has(w[0])));
     if (!pool.length) return;
     const word = pool[Math.floor(wordRand() * pool.length)], id = 'U' + Date.now(), right = wordRand() < 0.5, sp = 60 * STATE.sf;
     const base = right ? -60 * STATE.sf - word.length * sp : canvas.width + 60 * STATE.sf;
@@ -635,7 +651,7 @@ function spawnUfo() {
         enemies.push(e);
     }
     STATE.ufoId = id;
-    createPopText('BONUS UFO! NO PENALTY IF IT ESCAPES', canvas.width / 2, canvas.height / 2 + 190 * STATE.sf, '#c77dff');
+    createPopText('BONUS UFO (OPTIONAL)', canvas.width / 2, canvas.height / 2 + 190 * STATE.sf, '#c77dff');
 }
 
 function updateUI() {
@@ -644,7 +660,7 @@ function updateUI() {
     if (UI_CACHE.wave !== STATE.wave) { UI.wave.textContent = STATE.wave; UI_CACHE.wave = STATE.wave; }
     
     if (UI_CACHE.hull !== STATE.hull) {
-        UI.health.textContent = STATE.hull + "%"; 
+        UI.health.textContent = "\u25B2".repeat(Math.max(0, Math.ceil(STATE.hull / 20))) + " " + STATE.hull + "%"; 
         UI.health.style.color = STATE.hull > 50 ? "var(--neon-green)" : (STATE.hull > 20 ? "var(--neon-yellow)" : "var(--neon-pink)");
         UI_CACHE.hull = STATE.hull;
     }
@@ -673,11 +689,8 @@ function damagePlayer(amt) {
     STATE.hull -= amt; STATE.combo = 0; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 300);
     AudioFX.error(); updateUI();
     if(STATE.hull <= 0) { 
-        STATE.active = false; 
-        let d = new Date(); let dateStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,'0') + "-" + String(d.getDate()).padStart(2,'0');
-        STATE.newBest = STATE.score > 0 && (STATE.highScores.length === 0 || STATE.score > STATE.highScores[0].score);
-        STATE.highScores.push({ score: STATE.score, wave: STATE.wave, date: dateStr });
-        STATE.highScores.sort((a,b) => b.score - a.score); STATE.highScores = STATE.highScores.slice(0, 5);
+        STATE.active = false; setControls(false);
+        recordRun();
         saveGameData(); renderScoreboard();
         
         if (UI.endScore) {
@@ -707,6 +720,7 @@ window.addEventListener('resize', resizeCanvas);
 
 function gameLoop(time) {
     if(!STATE.active) return;
+    if (STATE.paused) { STATE.lastFrame = time; requestAnimationFrame(gameLoop); return; }
     
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
 
@@ -785,14 +799,16 @@ function gameLoop(time) {
             
             STATE.hull = Math.min(100, STATE.hull + 20); updateUI();
 
+            const rid = STATE.runId;
             setTimeout(() => {
+                if (rid !== STATE.runId || !STATE.active) return;
                 STATE.isHyperspace = false;
                 STATE.wave++;
                 spawnWave();
             }, 2500); 
         } else if (!STATE.isHyperspace) {
             STATE.wave++; 
-            setTimeout(spawnWave, 1500);
+            { const rid = STATE.runId; setTimeout(() => { if (rid === STATE.runId && STATE.active) spawnWave(); }, 1500); }
         }
     }
 
@@ -844,6 +860,8 @@ function gameLoop(time) {
 
 function startGame() {
     initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects();
+    STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true);
+    const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
     
@@ -857,7 +875,7 @@ function startGame() {
     STATE.recentErrors = []; STATE.weaponJamTimer = 0;
     
     let taCheckbox = document.getElementById('chk-textassistant');
-    STATE.textAssistantEnabled = taCheckbox ? taCheckbox.checked : false; STATE.shield = false; STATE.goldenId = null; STATE.ufoId = null;
+    STATE.textAssistantEnabled = true; STATE.shield = false; STATE.goldenId = null; STATE.ufoId = null;
     let dailyChk = document.getElementById('chk-daily'); STATE.daily = !!(dailyChk && dailyChk.checked); if (STATE.daily) initDaily(); 
     STATE.taFadeOutTime = 0;
     
@@ -884,7 +902,7 @@ function startGame() {
 
 let lastKeyPress = 0;
 document.addEventListener('keydown', (e) => {
-    if(!STATE.active || e.repeat || STATE.isHyperspace) return; 
+    if(!STATE.active || STATE.paused || e.repeat || STATE.isHyperspace) return; 
     
     let now = performance.now();
     if (now < STATE.weaponJamTimer) return; 
@@ -1035,3 +1053,36 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !STATE.active && UI.endScreen && UI.endScreen.style.display === 'flex') { e.preventDefault(); startGame(); }
 });
+
+// ---- pause / exit (exiting forfeits the run: no resume, so settings cannot be changed mid-run) ----
+function setControls(show) { const g = document.getElementById('game-controls'); if (g) g.style.display = show ? 'flex' : 'none'; }
+function pauseGame() {
+    if (!STATE.active || STATE.paused) return;
+    STATE.paused = true; STATE.pausedAt = performance.now();
+    const p = document.getElementById('pause-screen'); if (p) p.style.display = 'flex';
+}
+function resumeGame() {
+    if (!STATE.paused) return;
+    const ms = performance.now() - STATE.pausedAt;
+    STATE.startTime += ms; STATE.taFadeOutTime += ms;
+    lastKeyPress = performance.now(); lastGoodChar = null;
+    STATE.paused = false; STATE.lastFrame = performance.now();
+    const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
+}
+function exitToMenu() {
+    if (!STATE.active) return;
+    const wasPaused = STATE.paused;
+    if (!wasPaused) pauseGame();
+    if (!confirm('Exit to the main screen? This run ends without a score and cannot be resumed.')) { if (!wasPaused) resumeGame(); return; }
+    STATE.active = false; STATE.paused = false; STATE.runId = (STATE.runId || 0) + 1;
+    enemies = []; STATE.bossRef = null; STATE.currentTarget = null;
+    setControls(false);
+    const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
+    if (UI.hostageCave) UI.hostageCave.style.display = 'none';
+    if (UI.bossAlert) UI.bossAlert.style.display = 'none';
+    saveGameData(); renderScoreboard(); resetToMenu();
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && STATE.active) { e.preventDefault(); STATE.paused ? resumeGame() : pauseGame(); }
+});
+window.addEventListener('blur', () => { if (STATE.active && !STATE.paused) pauseGame(); });

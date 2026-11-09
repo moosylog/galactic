@@ -395,7 +395,12 @@ class SwarmEnemy {
         let spacing = 70 * STATE.sf; let wordWidth = totalInWord * spacing;
         this.formX = (canvas.width/2) - (wordWidth/2) + (index * spacing);
         
-        this.formY = (120 + (Math.random() * 80)) * STATE.sf;
+        let hsh = 0; for (const ch of String(this.wordId)) hsh = (hsh * 31 + ch.charCodeAt(0)) >>> 0;
+        const slot = STATE.slot || 0, n = totalInWord, mid = (n - 1) / 2;
+        this.pattern = (hsh + slot * 2) % 6;
+        const shape = [0, Math.abs(index - mid) * 16, -Math.sin(Math.PI * index / Math.max(1, n - 1)) * 28, Math.sin(index * 1.2) * 20][(hsh >>> 3) % 4];
+        this.formX += (slot % 2 === 0 ? -1 : 1) * 60 * STATE.sf;
+        this.formY = ((STATE.challenge ? 90 + slot * 55 : 110 + slot * 70) + shape) * STATE.sf;
         
         this.active = true; this.targeted = false; 
         this.color = (this.targetNode.color === 'var(--neon-blue)') ? '#00f3ff' : '#ff0055';
@@ -413,12 +418,25 @@ class SwarmEnemy {
         }
         if(this.state === 'enter') {
             this.enterT = (this.enterT || 0) + dt;
-            if (this.sx === undefined) { this.sx = this.sideRight ? canvas.width + 60 * STATE.sf : -60 * STATE.sf; this.sy = 40 * STATE.sf; }
+            const W = canvas.width, H = canvas.height, sf = STATE.sf, pat = this.pattern % 6;
+            if (this.sx === undefined) {
+                const right = (pat === 2) ? (this.index % 2 === 0) : this.sideRight;
+                const top = (pat === 1 || pat === 3);
+                this.sx = top ? W / 2 + (this.sideRight ? 1 : -1) * 120 * sf : (right ? W + 60 * sf : -60 * sf);
+                this.sy = top ? -40 * sf : (pat === 4 ? H * 0.5 : (pat === 2 ? 100 * sf : 40 * sf));
+            }
             const p = Math.min(1, Math.max(0, this.enterT - this.index * 140) / 2400);
-            const ease = p * p * (3 - 2 * p), loop = 1 - p;
-            this.x = this.sx + (this.formX - this.sx) * ease + Math.sin(p * Math.PI * 2) * 140 * STATE.sf * loop * (this.sideRight ? -1 : 1);
-            this.y = this.sy + (this.formY - this.sy) * ease + (1 - Math.cos(p * Math.PI * 2)) * 70 * STATE.sf * loop;
-            if (p >= 1) this.state = 'hover';
+            const e = p * p * (3 - 2 * p), q = 1 - p, d = this.sideRight ? -1 : 1;
+            let ox = 0, oy = 0;
+            if (pat === 0) { ox = Math.sin(p * 6.283) * 140 * sf * q * d; oy = (1 - Math.cos(p * 6.283)) * 70 * sf * q; }
+            else if (pat === 1) { const th = p * 12.566 * d; ox = (Math.cos(th) - 1) * 150 * sf * q; oy = Math.sin(th) * 150 * sf * q; }
+            else if (pat === 2) { oy = Math.sin(p * Math.PI) * 120 * sf; }
+            else if (pat === 3) { ox = Math.sin(p * 9.42 + this.index * 0.8) * 130 * sf * q; }
+            else if (pat === 4) { oy = -Math.sin(p * Math.PI) * 260 * sf; ox = Math.sin(p * 6.283) * 60 * sf * q * d; }
+            else { ox = Math.sin(p * 6.283) * 140 * sf * d; oy = Math.sin(p * 12.566) * 60 * sf * q; }
+            this.x = this.sx + (this.formX - this.sx) * e + ox;
+            this.y = this.sy + (this.formY - this.sy) * e + oy;
+            if (p >= 1) this.state = STATE.challenge ? 'fly' : 'hover';
         }
         else if (this.state === 'hover') {
             this.formY += 0.2 * STATE.sf * (dt/16);
@@ -429,6 +447,9 @@ class SwarmEnemy {
             let diveChance = 0.0005 + (STATE.wave * 0.0002);
             if (enemies.length <= 8) diveChance += diff.rush;
             if (this.hoverT > diff.grace && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
+        }
+        else if (this.state === 'fly') {
+            this.y += 0.5 * STATE.sf * (dt/16); this.x += Math.sin(time/450 + this.index) * 1.2 * STATE.sf * (dt/16);
         }
         else if (this.state === 'dive') {
             let dx = this.targetNode.x - this.x; this.x += dx * 0.02 * (dt/16);

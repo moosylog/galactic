@@ -5,9 +5,9 @@ const CURRENT_VERSION = "1.5.0";
 
 const DATA = {
     DIFFICULTY: {
-        academy: { minLen: 3, maxLen: 5, baseSpeed: 0.25, scoreMod: 1.0, grace: 7000, rush: 0.002, missDmg: 5, hold: 120000 },
-        contender: { minLen: 4, maxLen: 7, baseSpeed: 0.45, scoreMod: 2.0, grace: 4000, rush: 0.005, missDmg: 8, hold: 10000 },
-        apex: { minLen: 5, maxLen: 8, baseSpeed: 0.65, scoreMod: 3.0, grace: 1500, rush: 0.01, missDmg: 10, hold: 2000 }
+        academy: { minLen: 3, maxLen: 5, baseSpeed: 0.25, scoreMod: 1.0, grace: 7000, rush: 0.002, missDmg: 5, hold: 120000, rank0: 600, rankStep: 120 },
+        contender: { minLen: 4, maxLen: 7, baseSpeed: 0.45, scoreMod: 2.0, grace: 4000, rush: 0.005, missDmg: 8, hold: 10000, rank0: 1500, rankStep: 250 },
+        apex: { minLen: 5, maxLen: 8, baseSpeed: 0.65, scoreMod: 3.0, grace: 1500, rush: 0.01, missDmg: 10, hold: 2000, rank0: 3500, rankStep: 400 }
     },
     GEO: {
         go60: [{x:0,y:0.9},{x:1,y:0.9},{x:2,y:0.25},{x:3,y:0},{x:4,y:0.15},{x:5,y:0.25},{x:11,y:0.25},{x:12,y:0.15},{x:13,y:0},{x:14,y:0.25},{x:15,y:0.9},{x:16,y:0.9},{x:0,y:1.9},{x:1,y:1.9},{x:2,y:1.25},{x:3,y:1},{x:4,y:1.15},{x:5,y:1.25},{x:11,y:1.25},{x:12,y:1.15},{x:13,y:1},{x:14,y:1.25},{x:15,y:1.9},{x:16,y:1.9},{x:0,y:2.9},{x:1,y:2.9},{x:2,y:2.25},{x:3,y:2},{x:4,y:2.15},{x:5,y:2.25},{x:11,y:2.25},{x:12,y:2.15},{x:13,y:2},{x:14,y:2.25},{x:15,y:2.9},{x:16,y:2.9},{x:0,y:3.9},{x:1,y:3.9},{x:2,y:3.25},{x:3,y:3},{x:4,y:3.15},{x:5,y:3.25},{x:11,y:3.25},{x:12,y:3.15},{x:13,y:3},{x:14,y:3.25},{x:15,y:3.9},{x:16,y:3.9},{x:2,y:4.25},{x:3,y:4},{x:4,y:4.15},{x:12,y:4.15},{x:13,y:4},{x:14,y:4.25},{x:3,y:5.25,r:15},{x:4,y:5.25,r:30},{x:5,y:5.25,r:45},{x:11,y:5.25,r:-45},{x:12,y:5.25,r:-30},{x:13,y:5.25,r:-15}],
@@ -41,44 +41,62 @@ let DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] };
 let usedWords = new Set();
 let customLayoutArray = null;
 
-let offlineDict = ["the","and","you","that","was","for","are","with","his","they","this","have","from","one","had","word","but","not","what","all","were","when","your","can","said","there","use","each","which","she","how","their","will","other","about","out","many","then","them","these","some","her","would","make","like","him","into","time","has","look","two","more","write","see","number","way","could","people","than","first","water","been","call","who","oil","its","now","find","long","down","day","did","get","come","made","may","part"];
-offlineDict.forEach(w => {
-    w = w.toLowerCase().replace(/[^a-z]/g, '');
-    if (w.length < 3) return;
-    DATA.DICTIONARY.push(w);
-    let len = w.length; if(len > 6) len = 6;
-    DICT_BUCKETS[len].push(w);
-});
-
-fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt')
-    .then(res => res.text())
-    .then(text => {
-        let words = text.split('\n');
-        if (words.length > 100) {
-            DATA.DICTIONARY = []; 
-            DICT_BUCKETS = { 3:[], 4:[], 5:[], 6:[], 7:[], 8:[] };
-            words.forEach(w => {
-                w = w.toLowerCase().replace(/[^a-z]/g, '');
-                if (w.length < 3) return;
-                DATA.DICTIONARY.push(w);
-                let len = w.length;
-                if(len > 8) len = 8;
-                if(!DICT_BUCKETS[len]) DICT_BUCKETS[len] = [];
-                DICT_BUCKETS[len].push(w);
-            });
-        }
-    }).catch(e => console.warn("Network dict failed. Running on offline fallback."));
+// Built-in fallback list (original, roughly easy -> hard). The online list below replaces it when available.
+const OFFLINE_WORDS = `the and you for are not but all can her was one our out day get has him his how man new now old see two way who boy did its let put say she too use dad mom sun run big red top hot cat dog sit cup hat pen map bus car eat fun sky sea tea yes yet ask end eye far few got job key law lot men own pay saw set son try war why win age air arm art bad bed bit box buy cut die dry ear fall farm fast feel fire fish food foot form four free from full game girl give gold good grow hand hard have head hear help here high home hope hour idea into join keep kind king know land last late life like line list live long look love made make many meet mind more most move much name near need next nice note once only open over page park part past plan play read real rest ride ring road room rule safe same seen send show side sing slow some song soon star stay stop such sure take talk team tell than that them then they thing think this time tree true turn used very walk want warm wash wave week well went were what when will wind wish with word work year your
+about after again along below black bread break bring build carry catch child clean clear climb clock close cloud count dance dream drink drive early earth empty enjoy equal every field final floor focus force found fresh front fruit glass grass great green group happy heart heavy horse house human juice large laugh learn leave light local lucky magic major maybe money month mouse music never night noise north novel ocean offer order paint paper party peace phone piano place plant point power press price quick quiet radio raise reach river round scale scene score sense serve shape share sharp shirt short sight sleep small smile solid sound south space speak speed spend sport stage stand start state steam still stone story sugar sweet table taste teach thank their there these three throw tiger today touch tower train truck trust truth under until upper usual voice watch water wheel where which while white whole world write young
+bridge button camera castle change circle coffee corner cotton danger doctor dollar dragon engine family farmer finger flower forest friend garden gentle ground guitar hammer island jungle kitchen ladder letter little market master memory middle mirror moment mother nature number object orange pencil planet pocket proper rabbit rocket school shadow silver simple spring street summer supper system ticket travel valley window winter wonder yellow
+quality mixture explain quickly jacket journey puzzle freeze wizard zipper oxygen excited exercise crystal diamond fantasy general history imagine justice kingdom library machine monster network pattern picture quarter railway science silence stories teacher thunder tonight traffic variety weather whisper blanket captain chicken chimney complex dolphin elegant explore fashion freedom grocery harvest imagine jewelry kettle lantern leopard mystery orchard penguin quartet rainbow squirrel texture unique vacuum walnut zebra
+computer birthday children daughter election elephant festival favorite football hospital industry language magazine mountain national painting platform pleasant practice progress question reaction sandwich scissors security shoulder standard strength straight surprise together tomorrow training umbrella vacation wardrobe weekend whenever absolute adventure`.split(/\s+/);
+const JUNK_WORDS = new Set(['usb', 'url', 'faq', 'asp', 'cgi', 'gif', 'iso', 'mpeg', 'jpeg', 'isbn']);
+// Quality gate for the online list: it contains names, places, brands and abbreviations. 3-letter words must be on this allow-list;
+// longer junk goes on the block-list (add words here if you meet one you do not like).
+const ALLOW3 = new Set("the and for you not are all new was can has but our one may out use any see his who now get how its top had day two buy her add she set map way off did car own end him per big law art old why low man job too men box air yes hot say tax got let act red key few age pay war yet sun run net put try log fun lot ask due pro ago via bad far oil bit bay bar dog gas six sat zip bid inn win bed sea cut kit boy son max bin van ads pop hit eye fee aid fat saw led fan ten cat die pet guy cup fit met ice bus bag bug mid lab tag mix fix ray dry spa won mom row eat aim tip ski fly hey tea sky toy hip dot cap ink pin raw hat wet ram fox arm pub hop gun kid pan sum oak vat sir spy sit wow fig tab sin leg gap era jet par mad pen joy ran ill lay bet dad ear tie toe lie amp pad rod sad pot egg jam arc app ion ban odd cry zoo tee hub ace flu rap tin rat gym tan alt pie bow cab dam tub ash tap bee pit ton cow bra pig lit fur tar rug ham nut jar wax bye ant apt gem gig fin mud dip lid hay cop dim sip mug wit rim fog duo aye rid rip bat lip sap dig web jaw lap nod nor oar owl peg rag rib rig rob rub sag sew shy sly sob sow tug vet wag wig woe bud cub den dew dug ego gum gut hen hid hug hum jog jug nap nun paw pea pup ode".split(" "));
+const BLOCKED_WORDS = new Set("paul mary mike jack eric dave jeff tony matt jean adam gary jose jane alan nick anne ryan alex andy greg lisa sean kent rico phil ross anna rick fred marc kate carl neil brad juan todd doug cole lynn joel luke pete penn dale chad josh ruth joan sara troy karl shaw judy earl beth jill dans hans lucy luis hugh jake dana owen kyle stan erik kurt hugo leon reid rosa asia java iraq ohio iowa utah iran cuba peru rome arab nasa unix xbox ipod ford sony dell kong hong perl euro wiki faqs urls isbn ieee ncaa espn jpeg mpeg midi scsi voip oclc asin pmid mrna cdna gzip href divx msie adsl issn usda usgs usps dept univ misc prev proc spec phys comp comm conf ment biol hist prot incl dist eval chem goto thru alot tion dont cant nike audi benz sims suse treo ipaq zope avon fuji asus acer yale maui oman guam laos mali bali fiji reno paso pdas cnet foto lite para sans ciao mins sept thai jews".split(" "));
+let WORD_RANK = {};
+// Keeps 3-8 letter real words only, in list order (the online list is sorted by how common a word is).
+function buildDictionary(list) {
+    const seen = new Set(), out = [];
+    list.forEach(w => {
+        w = w.toLowerCase().replace(/[^a-z]/g, '');
+        if (w.length < 3 || w.length > 8 || seen.has(w) || !/[aeiouy]/.test(w) || JUNK_WORDS.has(w) || BLOCKED_WORDS.has(w) || (w.length === 3 && !ALLOW3.has(w))) return;
+        seen.add(w); out.push(w);
+    });
+    DATA.DICTIONARY = out;
+    DICT_BUCKETS = { 3: [], 4: [], 5: [], 6: [], 7: [], 8: [] };
+    WORD_RANK = {};
+    out.forEach((w, i) => { DICT_BUCKETS[w.length].push(w); WORD_RANK[w] = i; });
+}
+function rankLimit() {
+    const d = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
+    return d.rank0 + Math.max(1, STATE.wave || 1) * d.rankStep;
+}
+let cachedDict = null;
+try { cachedDict = localStorage.getItem('galactic-dict-v1'); } catch (e) {}
+buildDictionary(cachedDict ? cachedDict.split('\n') : OFFLINE_WORDS);
+if (!cachedDict) {
+    fetch('https://raw.githubusercontent.com/first20hours/google-10000-english/master/google-10000-english-no-swears.txt')
+        .then(res => res.text())
+        .then(text => {
+            if (text.split('\n').length > 100) {
+                buildDictionary(text.split('\n'));
+                try { localStorage.setItem('galactic-dict-v1', text); } catch (e) {}
+            }
+        }).catch(e => console.warn('Network dict failed. Running on offline fallback.'));
+}
 
 function getPracticeWords(bigram, single, count = 5) {
-    const ok = w => w.length <= 8 && [...w].every(ch => STATE.activeKeys[ch]);
+    const typable = w => w.length <= 8 && [...w].every(ch => STATE.activeKeys[ch]);
+    const lim = rankLimit() * 2, easy = w => WORD_RANK[w] === undefined || WORD_RANK[w] < lim;
     const occ = w => w.split(bigram).length - 1;
     const shuffle = a => a.sort(() => Math.random() - 0.5);
-    let pool = shuffle(DATA.DICTIONARY.filter(w => ok(w) && w.includes(bigram))).sort((a, b) => occ(b) - occ(a)).slice(0, 40);
-    let res = shuffle(pool).slice(0, count);
-    if (res.length < count) {
-        let fb = shuffle(DATA.DICTIONARY.filter(w => ok(w) && w.includes(single) && !res.includes(w)));
-        res = res.concat(fb.slice(0, count - res.length));
-    }
+    let res = [];
+    const add = pred => {
+        if (res.length >= count) return;
+        const pool = shuffle(DATA.DICTIONARY.filter(w => typable(w) && pred(w) && !res.includes(w))).sort((a, b) => occ(b) - occ(a)).slice(0, 40);
+        res = res.concat(shuffle(pool).slice(0, count - res.length));
+    };
+    add(w => easy(w) && w.includes(bigram)); add(w => w.includes(bigram));
+    add(w => easy(w) && w.includes(single)); add(w => w.includes(single));
     return res;
 }
 
@@ -152,7 +170,9 @@ function showBigramReport() {
         + (ups.length ? 'LEVEL UP: ' + ups.slice(0, 4).join(', ') + '  ' : '')
         + (best ? 'IMPROVED: ' + best.k.toUpperCase() + ' -' + Math.round(best.d) + 'ms  ' : '')
         + (wb.length ? 'FOCUS: ' + wb.join(', ') + '  ' : '') + '[ENTER = PLAY AGAIN]';
-    STATE.resultText = 'GALACTIC KEYSTROKE' + (STATE.daily ? ' DAILY ' + STATE.dailyDate : '') + ' | SECTOR ' + STATE.wave + ' | ' + STATE.score + ' PTS | ' + mi.rank;
+    const ek = document.getElementById('end-keys');
+    if (ek) ek.innerHTML = 'DIFFICULTY: <b>' + String(STATE.difficulty || '').toUpperCase() + '</b><br>TOP 5 PROBLEM KEYS: <b>' + (problemKeys().map(k => k.toUpperCase()).join(', ') || 'NONE YET') + '</b>';
+    STATE.resultText = 'GALACTIC KEYSTROKE' + (STATE.daily ? ' DAILY ' + STATE.dailyDate : '') + ' | SECTOR ' + STATE.wave + ' | ' + STATE.score + ' PTS | ' + mi.rank + ' | DICT ' + DATA.DICTIONARY.length;
 }
 
 const SECTOR_BG = ['#0a0a2a', '#1a0a2e', '#062a2a', '#2a1a06', '#2a0a14'];
@@ -206,3 +226,20 @@ function initDaily() {
     STATE.dailyDate = s;
 }
 function wordRand() { return (STATE.daily && dailyRand) ? dailyRand() : Math.random(); }
+
+// ---- run records: all-time high + last 10 runs, each with its 5 problem keys ----
+function problemKeys() {
+    return Object.entries(STATE.bioTracker || {}).map(([k, b]) => {
+        const tot = b.presses + b.misses; if (tot < 3) return null;
+        const lat = b.latencies && b.latencies.length ? b.latencies.reduce((a, v) => a + v, 0) / b.latencies.length : 0;
+        return [k, (b.misses / tot) * 0.6 + Math.min(1, lat / 800) * 0.4];
+    }).filter(Boolean).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
+}
+function recordRun() {
+    const entry = { t: Date.now(), score: STATE.score, wave: STATE.wave, diff: STATE.difficulty, daily: !!STATE.daily,
+        dur: Math.round((performance.now() - STATE.startTime) / 1000), keys: problemKeys() };
+    STATE.newBest = entry.score > 0 && (!STATE.records.best || entry.score > STATE.records.best.score);
+    if (STATE.newBest) STATE.records.best = entry;
+    STATE.records.recent.unshift(entry);
+    STATE.records.recent.length = Math.min(STATE.records.recent.length, 10);
+}
