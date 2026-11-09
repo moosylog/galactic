@@ -37,7 +37,7 @@ A Galaga-style typing shooter for keyboard enthusiasts. Letters fly in as words,
 ## How to play
 
 1. **Words arrive as letters.** Each word flies in as a group of letters and settles into a row near the top. Every word in a wave starts with a different letter.
-2. **Choose a word** by typing its first letter. The word helper at the bottom of the playfield shows all words with their first letters in green.
+2. **Choose a word** by typing its first letter. The word helper, one fixed row just above the keyboard line, shows every word in the same order all the time, with first letters in green.
 3. **Finish it in order.** Once you have started a word you are *locked on*: only its next letter counts. The locked word is shown large with your progress.
 4. **A wrong key is a mistake**, not a switch. It breaks your combo and lowers your accuracy, but you keep your word and can carry on.
 5. **Letters that reach the danger line cost you health.** After a short grace period the letters of a word dive together, swooping toward the line above the keyboard. Finish the word before they land.
@@ -54,7 +54,7 @@ You can only start a word from its first letter, and you cannot jump between wor
 | **Status bar** | Score, wave/sector, combo, words per minute, accuracy, **HEALTH** and the **EMP** charge bar. |
 | **HEALTH** | Starts at 100%. Shown as ship icons (one per 20%) plus the percentage. Reaching 0 ends the run. |
 | **EMP bar** | Fills as you hit letters and earn bonuses. When full it glows and **Enter** detonates it (see [Waves, bosses and bonuses](#waves-bosses-and-bonuses)). |
-| **Word helper** | The words you can type, just above the danger line. Always visible. Before you start a word: every word, first letters green. Once locked: the current word large, the others small. Golden words are shown in gold. |
+| **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
 | **Danger line** | The horizontal line above the keyboard. A letter that crosses it costs health. |
 | **Keyboard panel** | Your real layout. See below. |
 | **Pop-up messages** | Short notices such as WAVE, FOCUS, CLEAN, BLAZING, COMBO, BOSS CHARGING, SHIELD READY. |
@@ -93,6 +93,11 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 **Normal waves.** One word in waves 1 to 4, two in waves 5 to 8, three from wave 9 (a fourth for players averaging 90+ WPM). Words enter from the sides or top in one of six random patterns (loop, spiral, pincer, snake, arc, figure-eight), settle in their own rows, and later dive in S-curves.
 
 **Focus waves.** Every third wave is themed on one of your weak bigrams. The wave announces it ("FOCUS: TH"), and the words contain that pair. In other waves, about a third of the words also contain your weakest or suspected-weak bigrams.
+
+**Centipede waves** (every 4th wave from wave 2: waves 2, 6, 14, 22, 26 and so on; boss and Challenge waves are never Centipede waves). Two words (three from wave 14) crawl down the screen as snakes, zig-zagging across and dropping a row at each edge, and they **speed up with every row**, like the arcade game. Type each one from its **head** (the first letter, ringed in yellow).
+- **A slip splits the snake.** A wrong key cuts the remaining letters in two: the front part speeds up and the rear part slows down. Each part is now its own shorter word, so you can finish either first.
+- **Mushrooms.** Every snake letter you shoot leaves a pink mushroom. They are harvested when the next wave starts for 20 points each.
+- A letter that reaches the danger line costs health, as in any other wave.
 
 **Challenge Stage** (waves 3, 8, 13, 18 and so on). Four words fly through the screen and leave. Nothing hurts you here: letters that escape cost no health and typos cost nothing. A **perfect clear pays double** the usual perfect-wave bonus.
 
@@ -138,6 +143,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 - **Boss:** finishing a boss pays 500 × the multipliers.
 - **Perfect wave:** 1,000 × the wave number × the difficulty multiplier (doubled in a Challenge Stage).
 - **EMP:** 50 points for each letter it clears.
+- **Mushrooms** (Centipede waves): 20 points each when harvested at the start of the next wave.
 
 Scores are only comparable within the same difficulty.
 
@@ -211,6 +217,7 @@ If you meet a word you do not like, add it to `BLOCKED_WORDS` in `js/config.js`.
 - Look at the **word helper**, pick one word, finish it, then pick the next.
 - A typo costs only a little in normal waves. Do not freeze. Keep typing.
 - Ignore the purple **UFO** until you are comfortable. It is only a bonus.
+- In a **Centipede wave**, a slip splits the snake. Do not panic: finish the front part first, then the rear.
 - Use **Pause** to take a breather. Press Esc any time.
 - After a run, look at your **problem keys** and let the yellow dots tell you what to practise.
 
@@ -220,6 +227,9 @@ If you meet a word you do not like, add it to `BLOCKED_WORDS` in `js/config.js`.
 
 **Why are some letters purple?**
 That is the optional Bonus UFO. You never have to type it.
+
+**What are the pink mushrooms?**
+Letters you shot in a Centipede wave. They are worth 20 points each at the start of the next wave.
 
 **Why did my keys disappear from the keyboard?**
 A boss captured them after a mistake. Type the 5 practice words to rescue them.
