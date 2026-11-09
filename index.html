@@ -86,6 +86,14 @@
                         <option value="custom" disabled hidden>Custom JSON Loaded</option>
                     </select>
                 </div>
+                <div>
+                    <label>Keyboard Size</label>
+                    <select id="kbSelect" onchange="setKbSize(this.value)">
+                        <option value="compact">Compact</option>
+                        <option value="small">Small</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
 
                 <div style="grid-column: 1 / -1;">
                     <label>Advanced Custom Layout Override</label>

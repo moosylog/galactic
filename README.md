@@ -16,6 +16,7 @@ tractor-beams the two keys involved, and you must type 5 practice words to rescu
 - **Galaga surprises:** six random entrance patterns (loop, spiral, pincer, snake, arc, figure-eight), each word in its own row and shape, a true Challenging Stage where words fly through with no penalty, dives swoop in S-curves, and from wave 2 a Bonus UFO sometimes glides across the top with a short word (+300 and EMP charge; no penalty if it escapes).
 - **Pause and exit:** Esc (or the PAUSE button) pauses; the game also pauses when the tab loses focus. EXIT returns to the main screen and forfeits the run, so settings cannot be changed mid-run.
 - **Records:** the main screen shows your all-time high and your last 10 runs with date, time, play time, score and the 5 problem keys of each run.
+- **Keyboard panel:** choose Small, Compact (default) or Large. A white glow marks the next key to press and a yellow dot marks your current focus keys.
 - **Targeted waves:** about a third of words contain your weakest (or suspect) bigrams.
 - **Focus and challenge waves:** every third wave is themed on one of your weak bigrams; wave 3, 8, 13... is a no-damage Challenge Stage where a perfect clear pays double.
 - **Feedback:** combo milestones every 25 (EMP charge, health), BLAZING/CLEAN word bonuses, laser pitch rising with your combo, new background colour each sector, a warning before a boss strikes, and an end-screen readout of your most improved bigram.
