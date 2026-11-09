@@ -440,7 +440,7 @@ class SwarmEnemy {
         }
         else if (this.state === 'hover') {
             this.formY += 0.2 * STATE.sf * (dt/16);
-            this.x = this.formX + Math.sin(time/500 + this.index) * (20 * STATE.sf);
+            this.x = this.formX + Math.sin(time/900 + (this.slot || 0)) * (8 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
             this.hoverT = (this.hoverT || 0) + dt;
@@ -661,7 +661,7 @@ function startSnake(letters, k) {
     letters.forEach(e => { e.state = 'snake'; e.snake = s; e.snakeSlot = e.index; });
     snakes.push(s);
 }
-function addMushroom(x, y) { if (STATE.mushrooms.length < 40) STATE.mushrooms.push({ x, y }); }
+function addMushroom(x, y) { if (STATE.mushrooms.length < 15) STATE.mushrooms.push({ x, y }); }
 function updateSnakes(dt) {
     const g = snakeGeom(), sp = SNAKE_SPACING * g.sf, base = ({ academy: 130, contender: 170, apex: 230 })[STATE.difficulty || 'contender'] * g.sf;
     for (let i = snakes.length - 1; i >= 0; i--) {
@@ -685,7 +685,7 @@ function drawSnakes(ctx, time) {
 }
 function drawMushrooms(ctx) {
     STATE.mushrooms.forEach(m => {
-        const r = 11 * STATE.sf; ctx.save();
+        const r = 8 * STATE.sf; ctx.save();
         ctx.fillStyle = '#f4e9d8'; ctx.fillRect(m.x - r * 0.3, m.y, r * 0.6, r * 0.9);
         ctx.fillStyle = '#ff5fb3'; ctx.beginPath(); ctx.arc(m.x, m.y, r, Math.PI, 0); ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(m.x - r * 0.35, m.y - r * 0.4, r * 0.18, 0, 6.283); ctx.fill();
