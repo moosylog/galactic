@@ -75,6 +75,7 @@ function loadGameData() {
                 UI.hwSelect.value = save.baseHardware || 'go60';
                 UI.layoutSelect.value = 'custom';
                 customLayoutArray = save.customArray;
+                if (save.customLayers && Array.isArray(save.customLayers.arrays)) { STATE.customLayers = save.customLayers; selectedLayerIdx = save.layerIdx | 0; showLayerSelect(); }
                 if(!UI.layoutSelect.querySelector('option[value="custom"]')) {
                     let opt = document.createElement('option'); opt.value = 'custom'; opt.textContent = 'Custom JSON Loaded'; UI.layoutSelect.appendChild(opt);
                 }
@@ -96,7 +97,7 @@ function saveGameData() {
         const payload = {
             version: CURRENT_VERSION, records: STATE.records, bigrams: STATE.bigrams,
             baseHardware: UI.hwSelect.value, layout: UI.layoutSelect.value,
-            customArray: customLayoutArray, isCustom: UI.layoutSelect.value === 'custom'
+            customArray: customLayoutArray, isCustom: UI.layoutSelect.value === 'custom', customLayers: STATE.customLayers || null, layerIdx: selectedLayerIdx
         };
         localStorage.setItem('galactic_keystroke_save', JSON.stringify(payload));
     } catch (e) {}
@@ -244,14 +245,21 @@ function getLayerBindings(data, idx) {
     if (Array.isArray(root.layers) && Array.isArray(root.layers[idx])) return root.layers[idx];
     return findBindings(data);
 }
-function populateLayerSelect(data) {
-    const root = data.keymap || data, sel = document.getElementById('layerSelect');
-    if (!sel || !Array.isArray(root.layers)) return;
+function showLayerSelect() {
+    const sel = document.getElementById('layerSelect'), cl = STATE.customLayers;
+    if (!sel || !cl || !cl.arrays.length) return;
     sel.innerHTML = '';
-    root.layers.forEach((_, i) => { const o = document.createElement('option'); o.value = i; o.textContent = (root.layer_names && root.layer_names[i]) || ('Layer ' + i); sel.appendChild(o); });
+    cl.arrays.forEach((_, i) => { const o = document.createElement('option'); o.value = i; o.textContent = (cl.names && cl.names[i]) || ('Layer ' + i); sel.appendChild(o); });
     sel.value = selectedLayerIdx; sel.style.display = 'block';
 }
-function onLayerChange(v) { selectedLayerIdx = +v; if (uploadedData) importLayout(uploadedData); }
+function onLayerChange(v) {
+    selectedLayerIdx = +v;
+    const cl = STATE.customLayers;
+    if (cl && cl.arrays[selectedLayerIdx] && cl.arrays[selectedLayerIdx].length) {
+        customLayoutArray = cl.arrays[selectedLayerIdx].slice();
+        UI.layoutSelect.value = 'custom'; updateLayoutString(); saveGameData();
+    } else if (uploadedData) importLayout(uploadedData);
+}
 function importLayout(data) {
     uploadedData = data;
             let detectedHw = 'go60';
@@ -265,6 +273,8 @@ function importLayout(data) {
             let bindings = getLayerBindings(data, selectedLayerIdx) || [];
             const expectedLen = DATA.GEO[detectedHw].length;
             const limit = DATA.GEO[detectedHw].length;
+            const rootObj = data.keymap || data;
+            STATE.customLayers = (Array.isArray(rootObj.layers) && rootObj.layers.length) ? { names: rootObj.layer_names || [], arrays: rootObj.layers.map(l => Array.isArray(l) ? Array.from({ length: limit }, (_, i) => i < l.length ? parseRawKeyObj(l[i]) : 'NONE') : []) } : null;
             let arr = [];
             for (let i = 0; i < limit; i++) {
                 if (i < bindings.length) arr.push(parseRawKeyObj(bindings[i]));
@@ -281,7 +291,7 @@ function importLayout(data) {
             setTimeout(() => UI.uploadBtn.textContent = "📁 Upload MoErgo json", 3000);
             
             updateLayoutString(); saveGameData();
-            populateLayerSelect(data);
+            showLayerSelect();
 }
 function handleJsonUpload(ev) {
     const file = ev.target.files[0]; if(!file) return;
@@ -1085,3 +1095,6 @@ function setKbSize(v) { if (!HUD_FRACS[v]) return; STATE.kbSize = v; try { local
     try { const v = localStorage.getItem('galactic_kb_size'); if (v && HUD_FRACS[v]) STATE.kbSize = v; } catch (e) {}
     const s = document.getElementById('kbSelect'); if (s) s.value = STATE.kbSize;
 })();
+
+// Restore saved layout, records and typing statistics when the page opens.
+loadGameData();
