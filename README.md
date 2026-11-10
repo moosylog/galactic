@@ -167,7 +167,7 @@ All settings are on the main screen. **They cannot be changed mid-run.**
 
 - **Hardware:** MoErgo Go60, MoErgo Glove80, Corne (42-key), ZSA Voyager, Standard ANSI 60%.
 - **Logical Layout:** QWERTY, Colemak-DH or Dvorak.
-- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Only letters on that layer are used for words. The button warns you if the layer does not have the number of keys the hardware expects.
+- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Your layout, all its layers and your chosen layer are remembered in your browser, so you do not need to upload the file again. Only letters on that layer are used for words. The button warns you if the layer does not have the number of keys the hardware expects.
 - **Difficulty:** Academy, Contender or Apex.
 - **Keyboard Size:** Small, Compact or Large (see above).
 
