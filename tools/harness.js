@@ -7,7 +7,7 @@ const read = f => { let t = fs.readFileSync(path.join(ROOT, f), 'utf8'); if (pro
 function makeEnv(diff, store = {}) {
   let clock = 1000, raf = null, timers = [], listeners = {};
   const mk = (init = {}) => {
-    const props = { style: {}, classList: { add() {}, remove() {}, contains: () => false }, value: '', checked: false, textContent: '', innerHTML: '', children: [], ...init };
+    const props = { style: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, value: '', checked: false, textContent: '', innerHTML: '', children: [], ...init };
     return new Proxy(function () {}, {
       get: (t, k) => k in props ? props[k] : (k === Symbol.toPrimitive ? () => 0 : mk()),
       set: (t, k, v) => { props[k] = v; return true; }, apply: () => mk(), construct: () => mk()
