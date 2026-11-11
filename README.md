@@ -8,29 +8,47 @@ A Galaga-style typing shooter for keyboard enthusiasts. Letters fly in as words,
 
 ## Contents
 1. [Quick start](#quick-start)
-2. [How to play](#how-to-play)
-3. [Reading the screen](#reading-the-screen)
-4. [The keyboard panel](#the-keyboard-panel)
-5. [Waves, bosses and bonuses](#waves-bosses-and-bonuses)
-6. [Health and score](#health-and-score)
-7. [Difficulty levels](#difficulty-levels)
-8. [Settings](#settings)
-9. [Controls](#controls)
-10. [Training and progress](#training-and-progress)
-11. [Words](#words)
-12. [Tips for beginners](#tips-for-beginners)
-13. [Questions and troubleshooting](#questions-and-troubleshooting)
-14. [Your data](#your-data)
-15. [For developers](#for-developers)
-16. [Credits and licence](#credits-and-licence)
+2. [The start screen](#the-start-screen)
+3. [How to play](#how-to-play)
+4. [Reading the screen](#reading-the-screen)
+5. [The keyboard panel](#the-keyboard-panel)
+6. [Waves, bosses and bonuses](#waves-bosses-and-bonuses)
+7. [Health and score](#health-and-score)
+8. [Difficulty levels](#difficulty-levels)
+9. [Settings](#settings)
+10. [Controls](#controls)
+11. [Training and progress](#training-and-progress)
+12. [Words](#words)
+13. [Tips for beginners](#tips-for-beginners)
+14. [Questions and troubleshooting](#questions-and-troubleshooting)
+15. [Your data](#your-data)
+16. [For developers](#for-developers)
+17. [Credits and licence](#credits-and-licence)
 
 ---
 
 ## Quick start
-1. Pick your **Hardware** and **Logical Layout** (or upload a custom layout, see [Settings](#settings)).
-2. Pick a **Difficulty**. If you are new, choose **Academy**.
-3. Start the game. Words fly in. **Type the first letter of a word, then finish it in order.**
-4. Keep your **health** above zero. Press **Esc** to pause.
+1. Open the game. On your first visit a short **How to play** screen appears once.
+2. On the title screen pick a **division** (Academy, Contender or Apex). Your current hardware and layout are shown in the line above it. Click that line to change them.
+3. Press **Enter** (or click PLAY). A coin drops and the game starts.
+4. Type the first letter of a word, then finish it in order. Keep your **health** above zero. Press **Esc** to pause.
+
+---
+
+## The start screen
+
+The start screen is split into four small screens, so nothing needs scrolling.
+
+| Screen | What it is for | How to open |
+|---|---|---|
+| **Title** | Pick a division and press PLAY. The line above the division buttons shows your hardware, layout and division. | Starts here after the first visit |
+| **Hall of fame** | Your all-time high, your last 10 runs, and a progress card with your rank, Bronze/Silver/Gold pairs and focus keys. | **H** or the link |
+| **Setup** | Three tabs: Keyboard, Display and Data (see Settings). | **S** or the link |
+| **How to play** | Three short cards. Shown automatically on the first visit only. | **?** or the link |
+
+**Insert coin.** The blinking *INSERT COIN* line is flavour only. Pressing **Enter** (or PLAY) drops a coin with a short sound and starts the game a moment later. There is nothing to earn or spend, and no extra step. The same Enter key starts a new game from the end screen.
+
+**Menu animation.** Stars, falling letters and a little ship play behind the menu. You can switch this off under Setup, Display. It is also off automatically if your system asks for reduced motion.
 
 ---
 
@@ -76,7 +94,7 @@ The panel at the bottom of the screen mirrors the layout you chose. Letters dive
 - **Captured keys disappear** from the panel during a boss rescue and come back when you rescue them.
 - **A small legend** in the right corner above the danger line explains the glow and the dot: *WHITE GLOW = NEXT KEY, YELLOW DOT = FOCUS KEY*.
 
-**Keyboard Size** (main screen, remembered between visits):
+**Keyboard Size** (Setup, Display tab; remembered between visits):
 
 | Size | Share of screen height | Notes |
 |---|---|---|
@@ -163,13 +181,22 @@ On every level on **Apex** words get one letter longer every 8 waves (up to two 
 
 ## Settings
 
-All settings are on the main screen. **They cannot be changed mid-run.**
+All settings are in **Setup** on the start screen. **They cannot be changed mid-run.** Your division is chosen on the title screen.
 
+**Keyboard tab**
 - **Hardware:** MoErgo Go60, MoErgo Glove80, Corne (42-key), ZSA Voyager, Standard ANSI 60%.
 - **Logical Layout:** QWERTY, Colemak-DH or Dvorak.
-- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Your layout, all its layers and your chosen layer are remembered in your browser, so you do not need to upload the file again. Only letters on that layer are used for words. The button warns you if the layer does not have the number of keys the hardware expects.
-- **Difficulty:** Academy, Contender or Apex.
+- A drawn **keyboard preview** shows the letters the game will use.
+- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Only letters on that layer are used for words. Your layout, all its layers and your chosen layer are remembered in your browser, so you do not need to upload the file again. You are warned if the layer does not have the number of keys the hardware expects. *View layout data* shows the raw key list.
+
+**Display tab**
 - **Keyboard Size:** Small, Compact or Large (see above).
+- **Menu Animation:** the moving stars on the start screen.
+
+**Data tab**
+- **Export progress** saves a backup file with your records, typing statistics, layout and settings.
+- **Import progress** restores such a file, for example on another computer.
+- **Wipe data and reset cache** deletes your records, statistics and saved layout after a confirmation.
 
 ---
 
@@ -177,11 +204,15 @@ All settings are on the main screen. **They cannot be changed mid-run.**
 
 | Input | Action |
 |---|---|
+| **Enter** (start screen) | Drop a coin and start the game. |
+| **H** / **S** / **?** (start screen) | Open Hall of fame, Setup or How to play. |
+| **Left / Right arrow** (start screen) | Change the division. |
+| **Esc** (a start sub-screen) | Back to the title screen. |
 | Letter keys | Start a word with its first letter, then type it in order. |
 | **Enter** | Detonate EMP when the bar is full. On the end screen: play again. |
 | **Esc** | Pause or resume. |
 | **PAUSE** button (bottom left) | Same as Esc. |
-| **EXIT** button / **EXIT TO MAIN SCREEN** | End the run and return to the main screen. See below. |
+| **EXIT** button / **EXIT TO MAIN SCREEN** | End the run and return to the title screen. See below. |
 
 **Pause and exit.** Pausing freezes everything, and your WPM and combo timing are not affected. The game also pauses by itself if the tab or window loses focus. **Exiting ends the run with no score and cannot be resumed**, so settings can never be changed mid-run. Your typing statistics are still saved.
 
@@ -197,7 +228,7 @@ All settings are on the main screen. **They cannot be changed mid-run.**
 - **Hand and finger aware:** keys are tagged by hand and finger from the layout. Pairs are classed as same-finger, same-hand, alternating or thumb.
 - **Tiers and ranks:** each pair earns **Bronze, Silver or Gold** from accuracy and speed over time. The points add up to a rank: **Cadet, Pilot, Ace, Commander, Admiral**.
 - **End screen:** your rank, any pairs that levelled up, your most improved pair, the difficulty, your **top 5 problem keys** as text, and a keyboard heatmap (blue = fast and accurate, pink = slow or error-prone). Press **Enter** to play again.
-- **Records:** the main screen keeps your **all-time high** and your **last 10 runs**. Each shows date and time, how long you played, the **difficulty**, the wave, the score and the **top 5 problem keys** of that run. Exited runs are not recorded.
+- **Records:** the Hall of fame keeps your **all-time high** and your **last 10 runs**. Each shows date and time, how long you played, the **difficulty**, the wave, the score and the **top 5 problem keys** of that run. Exited runs are not recorded.
 
 The effect of the game on real typing speed has not been measured. It is built on deliberate-practice ideas: target weaknesses and give immediate feedback.
 
@@ -247,7 +278,7 @@ Only letters on the chosen layer are used. Pick another layer, or check the laye
 It scrolls. Making the browser window taller, or zooming out, also helps.
 
 **How do I start over?**
-Use **WIPE DATA & RESET CACHE** at the bottom of the main screen. It deletes your records, typing statistics and saved layout settings after a confirmation. Your keyboard size and the cached word list are kept.
+Use **WIPE DATA & RESET CACHE** in Setup, Data tab. It deletes your records, typing statistics and saved layout settings after a confirmation. Your keyboard size and the cached word list are kept.
 
 ---
 

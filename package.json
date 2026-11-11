@@ -1,1 +1,1 @@
-{"name":"galactic-keystroke","private":true,"scripts":{"test":"node tests/smoke.test.js && node tests/practice.test.js && node tests/pacing.test.js && node tests/snake.test.js && node tests/persistence.test.js"}}
+{"name":"galactic-keystroke","private":true,"scripts":{"test":"node tests/smoke.test.js && node tests/practice.test.js && node tests/pacing.test.js && node tests/snake.test.js && node tests/persistence.test.js && node tests/menu.test.js"}}

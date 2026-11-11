@@ -49,67 +49,113 @@
     <div id="boss-alert">WARNING<br><span>BIOMETRIC ANOMALY DETECTED</span></div>
 
     <div id="menu" class="overlay-screen">
-        <div class="menu-box">
-            <h1>GALACTIC<br><span>KEYSTROKE</span></h1>
-            
-            <div class="scoreboard-container" id="scoreboard-container">
-                <div class="scoreboard-title">HALL OF FAME</div>
-                <div id="highScoreList"></div>
-            </div>
-            
-            <div class="settings-grid">
-                <div style="grid-column: 1 / -1; margin-bottom: 10px;">
-                    <label style="color: var(--neon-yellow);">Championship Division (Difficulty)</label>
-                    <select id="diffSelect" style="border-color: var(--neon-yellow); color: var(--neon-yellow);">
-                        <option value="academy">Academy (Easy - 3 to 5 letters | 1.0x Score)</option>
-                        <option value="contender" selected>Contender (Normal - 4 to 7 letters | 2.0x Score)</option>
-                        <option value="apex">Apex (Hardcore - 5 to 8 letters | 3.0x Score)</option>
-                    </select>
-                </div>
+        <canvas id="menu-fx" aria-hidden="true"></canvas>
+        <div class="menu-box" id="menu-box">
+            <h1 id="menu-title">GALACTIC<br><span>KEYSTROKE</span></h1>
 
-                <div>
-                    <label>Physical Hardware</label>
-                    <select id="hwSelect" onchange="updateLayoutString(); saveGameData();">
-                        <option value="go60" selected>MoErgo Go60</option>
-                        <option value="glove80">MoErgo Glove80</option>
-                        <option value="corne">Corne (42-Key)</option>
-                        <option value="voyager">ZSA Voyager</option>
-                        <option value="ansi60">Standard ANSI 60%</option>
-                    </select>
+            <section id="scr-title" class="scr">
+                <div class="setup-chip" id="setup-chip" role="button" tabindex="0" onclick="showScreen('setup')" title="Change hardware and layout"></div>
+                <div class="div-buttons" role="group" aria-label="Division">
+                    <button class="div-btn" data-div="academy" onclick="setDivision('academy')"><b>ACADEMY</b><span>3-5 letters &middot; x1</span></button>
+                    <button class="div-btn" data-div="contender" onclick="setDivision('contender')"><b>CONTENDER</b><span>4-7 letters &middot; x2</span></button>
+                    <button class="div-btn" data-div="apex" onclick="setDivision('apex')"><b>APEX</b><span>5-8 letters &middot; x3</span></button>
                 </div>
-                <div>
-                    <label>Logical Layout</label>
-                    <select id="layoutSelect" onchange="updateLayoutString(); saveGameData();">
-                        <option value="qwerty">QWERTY</option>
-                        <option value="colemak_dh">Colemak-DH</option>
-                        <option value="dvorak">Dvorak</option>
-                        <option value="custom" disabled hidden>Custom JSON Loaded</option>
-                    </select>
+                <select id="diffSelect" style="display:none" aria-hidden="true">
+                    <option value="academy">Academy</option>
+                    <option value="contender" selected>Contender</option>
+                    <option value="apex">Apex</option>
+                </select>
+                <button class="btn-action" id="btn-start" onclick="insertCoin()">PLAY</button>
+                <div class="coin" id="coin-line">INSERT COIN <small>PRESS ENTER</small></div>
+                <div class="menu-links">
+                    <a tabindex="0" onclick="showScreen('hall')">[H] HALL OF FAME</a>
+                    <a tabindex="0" onclick="showScreen('setup')">[S] SETUP</a>
+                    <a tabindex="0" onclick="showScreen('howto')">[?] HOW TO PLAY</a>
                 </div>
-                <div>
-                    <label>Keyboard Size</label>
-                    <select id="kbSelect" onchange="setKbSize(this.value)">
-                        <option value="compact">Compact</option>
-                        <option value="small">Small</option>
-                        <option value="large">Large</option>
-                    </select>
-                </div>
+            </section>
 
-                <div style="grid-column: 1 / -1;">
-                    <label>Advanced Custom Layout Override</label>
-                    <label for="jsonUpload" class="upload-btn" id="lblUpload">📁 Upload MoErgo json</label>
-                    <select id="layerSelect" style="display:none" title="Layer to train" onchange="onLayerChange(this.value)"></select>
-                    <input type="file" id="jsonUpload" accept=".json" style="display: none;" onchange="handleJsonUpload(event)">
-                    
-                    <div class="advanced-toggle" onclick="toggleAdvanced()">[ VIEW ADVANCED LAYOUT DATA ]</div>
+            <section id="scr-hall" class="scr" style="display:none">
+                <div class="scr-head"><button class="back-btn" onclick="showScreen('title')">&larr; BACK</button><div class="scr-title">HALL OF FAME</div></div>
+                <div class="hall-grid"><div id="highScoreList"></div><div id="progress-panel"></div></div>
+            </section>
+
+            <section id="scr-setup" class="scr" style="display:none">
+                <div class="scr-head"><button class="back-btn" onclick="showScreen('title')">&larr; BACK</button><div class="scr-title">SETUP</div></div>
+                <div class="tabs" role="tablist">
+                    <button class="tab active" data-tab="keyboard" onclick="setupTab('keyboard')">KEYBOARD</button>
+                    <button class="tab" data-tab="display" onclick="setupTab('display')">DISPLAY</button>
+                    <button class="tab" data-tab="data" onclick="setupTab('data')">DATA</button>
+                </div>
+                <div class="tabpanel" id="tab-keyboard">
+                    <div class="settings-grid">
+                        <div>
+                            <label>Physical Hardware</label>
+                            <select id="hwSelect" onchange="updateLayoutString(); saveGameData();">
+                                <option value="go60" selected>MoErgo Go60</option>
+                                <option value="glove80">MoErgo Glove80</option>
+                                <option value="corne">Corne (42-Key)</option>
+                                <option value="voyager">ZSA Voyager</option>
+                                <option value="ansi60">Standard ANSI 60%</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Logical Layout</label>
+                            <select id="layoutSelect" onchange="updateLayoutString(); saveGameData();">
+                                <option value="qwerty">QWERTY</option>
+                                <option value="colemak_dh">Colemak-DH</option>
+                                <option value="dvorak">Dvorak</option>
+                                <option value="custom" disabled hidden>Custom JSON Loaded</option>
+                            </select>
+                        </div>
+                    </div>
+                    <canvas id="kb-preview" width="560" height="200" aria-label="Keyboard preview"></canvas>
+                    <div class="upload-row">
+                        <label for="jsonUpload" class="upload-btn" id="lblUpload">&#128193; Upload MoErgo json</label>
+                        <select id="layerSelect" style="display:none" title="Layer to train" onchange="onLayerChange(this.value)"></select>
+                        <input type="file" id="jsonUpload" accept=".json" style="display: none;" onchange="handleJsonUpload(event)">
+                    </div>
+                    <div class="advanced-toggle" onclick="toggleAdvanced()">[ VIEW LAYOUT DATA ]</div>
                     <div id="advanced-panel">
                         <textarea id="customLayoutStr" readonly style="height: 60px; color: #00f3ff; font-size: 0.9rem; border-color: #333; margin-top:10px; background: rgba(0,243,255,0.05);"></textarea>
                     </div>
                 </div>
-            </div>
-            
-            <button class="btn-action" id="btn-start" onclick="startGame()">INITIALIZE DEFENSE</button>
-            <div class="cache-reset" onclick="factoryReset()">[ WIPE DATA & RESET CACHE ]</div>
+                <div class="tabpanel" id="tab-display" style="display:none">
+                    <div class="settings-grid">
+                        <div>
+                            <label>Keyboard Size</label>
+                            <select id="kbSelect" onchange="setKbSize(this.value)">
+                                <option value="compact">Compact</option>
+                                <option value="small">Small</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Menu Animation</label>
+                            <label class="check-row"><input type="checkbox" id="chk-menufx" checked onchange="setMenuFx(this.checked)"> Moving stars on the menu</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="tabpanel" id="tab-data" style="display:none">
+                    <p class="data-note">Your progress lives in this browser. Export a backup file to keep it safe or to move it to another computer.</p>
+                    <div class="data-actions">
+                        <button class="tab" onclick="exportProgress()">EXPORT PROGRESS</button>
+                        <label for="progressUpload" class="tab" style="cursor:pointer">IMPORT PROGRESS</label>
+                        <input type="file" id="progressUpload" accept=".json" style="display:none" onchange="importProgress(event)">
+                    </div>
+                    <div class="cache-reset" onclick="factoryReset()">[ WIPE DATA & RESET CACHE ]</div>
+                </div>
+            </section>
+
+            <section id="scr-howto" class="scr" style="display:none">
+                <div class="scr-head"><button class="back-btn" onclick="finishHowTo()">&larr; BACK</button><div class="scr-title">HOW TO PLAY</div></div>
+                <div class="howto-cards">
+                    <div class="howto-card"><b>1 &middot; PICK A WORD</b><span>Words sit in one row above the keyboard. Type the first letter of any word to lock on.</span></div>
+                    <div class="howto-card"><b>2 &middot; TYPE IT IN ORDER</b><span>Finish the word letter by letter. A wrong key breaks your combo but keeps your word.</span></div>
+                    <div class="howto-card"><b>3 &middot; PROTECT YOUR HEALTH</b><span>Letters that reach the line cost health. Clear every word for the next wave. Esc pauses.</span></div>
+                </div>
+                <p class="data-note">White glow on the keyboard = next key. Yellow dot = a key you are training.</p>
+                <button class="btn-action" onclick="finishHowTo()">GOT IT</button>
+            </section>
         </div>
     </div>
 
