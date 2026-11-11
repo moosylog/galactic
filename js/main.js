@@ -108,19 +108,17 @@ function fmtWhen(e) {
     const d = new Date(e.t), p = n => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
-function scoreRow(e) {
-    const mins = e.dur ? Math.floor(e.dur / 60) + ':' + String(e.dur % 60).padStart(2, '0') : '';
-    const keys = (e.keys && e.keys.length) ? e.keys.map(k => k.toUpperCase()).join(', ') : 'NONE YET';
-    const sub = 'font-size:0.8rem;color:#8fa3b8;margin-top:3px;line-height:1.4';
-    return `<div class="score-item"><div class="score-info"><div>${fmtWhen(e)}${mins ? ' &middot; PLAYED ' + mins : ''}</div><div style="${sub}">DIFFICULTY: <b style="color:#fff">${e.diff ? String(e.diff).toUpperCase() : '-'}</b> &middot; WAVE ${e.wave}</div><div style="${sub}">TOP 5 PROBLEM KEYS: <b style="color:#fff">${keys}</b></div></div><div class="score-val">${String(e.score).padStart(6, '0')}</div></div>`;
+function scoreRow(e, cls) {
+    const mins = e.dur ? Math.floor(e.dur / 60) + ':' + String(e.dur % 60).padStart(2, '0') : '-';
+    const keys = (e.keys && e.keys.length) ? e.keys.map(k => k.toUpperCase()).join(' ') : 'NONE YET';
+    return `<div class="hof-row ${cls || ''}"><span>${fmtWhen(e)}</span><span>${mins}</span><span>${e.diff ? String(e.diff).toUpperCase() : '-'}</span><span>${e.wave}</span><b>${String(e.score).padStart(6, '0')}</b><span class="hof-keys">${keys}</span></div>`;
 }
 function renderScoreboard() {
-    const r = STATE.records; let html = '';
-    if (!r.best && r.recent.length === 0) html = '<div style="color: #4a5c70; font-size: 0.9rem; text-align: center; font-family:\'Share Tech Mono\'">NO RECORDS FOUND IN ARCHIVE</div>';
-    else {
-        if (r.best) html += '<div style="color:#ffea00;font-size:0.75rem;letter-spacing:3px;margin-bottom:6px">ALL-TIME HIGH</div>' + scoreRow(r.best);
-        if (r.recent.length) html += '<div style="color:#00f3ff;font-size:0.75rem;letter-spacing:3px;margin:14px 0 6px">LAST 10 RUNS</div>' + r.recent.map(scoreRow).join('');
-    }
+    const r = STATE.records; if (!UI.highScoreList) return;
+    const head = '<div class="hof-head"><span>WHEN</span><span>PLAYED</span><span>DIFFICULTY</span><span>WAVE</span><span>SCORE</span><span>TOP 5 PROBLEM KEYS</span></div>';
+    let html;
+    if (!r.best && r.recent.length === 0) html = '<div class="hof-empty">NO RECORDS YET. PLAY A GAME!</div>';
+    else html = '<div class="hof-label gold">ALL-TIME HIGH</div>' + head + (r.best ? scoreRow(r.best, 'best') : '') + '<div class="hof-label">LAST 10 RUNS</div>' + (r.recent.length ? r.recent.map(e => scoreRow(e)).join('') : '<div class="hof-empty">NONE YET</div>');
     UI.highScoreList.innerHTML = html;
 }
 
@@ -710,7 +708,7 @@ function damagePlayer(amt) {
     }
 }
 
-function resetToMenu() { if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; }
+function resetToMenu() { if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; showScreen('title'); startMenuFx(); }
 
 function resizeCanvas() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -1054,7 +1052,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !STATE.active && UI.endScreen && UI.endScreen.style.display === 'flex') { e.preventDefault(); startGame(); }
+    if (e.key === 'Enter' && !STATE.active && UI.endScreen && UI.endScreen.style.display === 'flex') { e.preventDefault(); insertCoin(); }
 });
 
 // ---- pause / exit (exiting forfeits the run: no resume, so settings cannot be changed mid-run) ----
@@ -1096,5 +1094,158 @@ function setKbSize(v) { if (!HUD_FRACS[v]) return; STATE.kbSize = v; try { local
     const s = document.getElementById('kbSelect'); if (s) s.value = STATE.kbSize;
 })();
 
+// ================= start screen: title, hall of fame, setup, how to play =================
+const DIV_NAMES = { academy: 'ACADEMY', contender: 'CONTENDER', apex: 'APEX' };
+const HW_NAMES = { go60: 'Go60', glove80: 'Glove80', corne: 'Corne', voyager: 'Voyager', ansi60: 'ANSI 60%' };
+const LAYOUT_NAMES = { qwerty: 'QWERTY', colemak_dh: 'Colemak-DH', dvorak: 'Dvorak', custom: 'Custom layout' };
+function byId(id) { return document.getElementById(id); }
+function prefs() { try { return JSON.parse(localStorage.getItem('galactic_prefs')) || {}; } catch (e) { return {}; } }
+function savePrefs(p) { try { localStorage.setItem('galactic_prefs', JSON.stringify(Object.assign(prefs(), p))); } catch (e) {} }
+function showScreen(name) {
+    ['title', 'hall', 'setup', 'howto'].forEach(s => { const e = byId('scr-' + s); if (e) e.style.display = (s === name) ? 'block' : 'none'; });
+    const box = byId('menu-box'); if (box && box.classList) box.classList.toggle('compact', name !== 'title');
+    STATE.screen = name;
+    if (name === 'title') refreshChip();
+    if (name === 'hall') { renderScoreboard(); renderProgress(); }
+    if (name === 'setup') { setupTab(STATE.setupTab || 'keyboard'); drawKbPreview(); }
+}
+function setupTab(t) {
+    STATE.setupTab = t;
+    ['keyboard', 'display', 'data'].forEach(n => { const p = byId('tab-' + n); if (p) p.style.display = (n === t) ? 'block' : 'none'; });
+    document.querySelectorAll('.tab[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+}
+function setDivision(v) {
+    if (!DIV_NAMES[v]) return;
+    UI.diffSelect.value = v; savePrefs({ div: v });
+    document.querySelectorAll('.div-btn').forEach(b => b.classList.toggle('active', b.dataset.div === v));
+    refreshChip();
+}
+function refreshChip() {
+    const c = byId('setup-chip'); if (!c) return;
+    c.textContent = (HW_NAMES[UI.hwSelect.value] || UI.hwSelect.value) + '  \u00B7  ' + (LAYOUT_NAMES[UI.layoutSelect.value] || UI.layoutSelect.value) + '  \u00B7  ' + (DIV_NAMES[UI.diffSelect.value] || '') + '   [ CHANGE ]';
+}
+function finishHowTo() { savePrefs({ seenHowTo: true }); showScreen('title'); }
+function renderProgress() {
+    const el = byId('progress-panel'); if (!el) return;
+    const mi = masteryInfo(), t = [0, 0, 0, 0];
+    Object.values(STATE.bigrams).forEach(b => { t[tierOf(b)]++; });
+    const next = RANKS.slice().reverse().find(r => r[0] > mi.pts);
+    const focus = Array.from(new Set(weakBigrams().slice(0, 4).join('').split(''))).map(c => c.toUpperCase()).join(' ');
+    el.innerHTML = `<div class="progress-card"><div class="pc-title">YOUR PROGRESS</div><div class="pc-rank">${mi.rank}</div><div class="pc-sub">${mi.pts} POINTS${next ? ' &middot; ' + (next[0] - mi.pts) + ' TO ' + next[1] : ' &middot; TOP RANK'}</div><div class="pc-row"><span>GOLD PAIRS</span><b>${t[3]}</b></div><div class="pc-row"><span>SILVER PAIRS</span><b>${t[2]}</b></div><div class="pc-row"><span>BRONZE PAIRS</span><b>${t[1]}</b></div><div class="pc-row"><span>FOCUS KEYS</span><b>${focus || '-'}</b></div></div>`;
+}
+function drawKbPreview() {
+    const cv = byId('kb-preview'); if (!cv || !cv.getContext || !UI.customLayoutStr) return;
+    const geo = DATA.GEO[UI.hwSelect.value]; if (!geo) return;
+    const keys = String(UI.customLayoutStr.value || '').split(',').map(s => s.trim().toLowerCase());
+    const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
+    let maxX = 0, maxY = 0; geo.forEach(k => { maxX = Math.max(maxX, k.x); maxY = Math.max(maxY, k.y); });
+    const u = Math.min((cv.width - 24) / (maxX + 1.2), (cv.height - 24) / (maxY + 1.2));
+    const ox = (cv.width - maxX * u) / 2, oy = (cv.height - maxY * u) / 2;
+    geo.forEach((k, i) => {
+        const ch = keys[i], letter = !!ch && ch.length === 1 && /[a-z;,.\/']/.test(ch), s = u * 0.88;
+        g.save(); g.translate(ox + k.x * u, oy + k.y * u); g.rotate((k.r || 0) * Math.PI / 180);
+        g.fillStyle = letter ? 'rgba(0,243,255,0.16)' : 'rgba(255,255,255,0.05)'; g.strokeStyle = letter ? '#00f3ff' : 'rgba(255,255,255,0.15)'; g.lineWidth = 1;
+        g.beginPath(); g.roundRect(-s / 2, -s / 2, s, s, 4); g.fill(); g.stroke();
+        if (letter) { g.fillStyle = '#fff'; g.font = Math.floor(s * 0.5) + "px 'Share Tech Mono'"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ch.toUpperCase(), 0, 0); }
+        g.restore();
+    });
+}
+const _updateLayoutString = updateLayoutString;
+updateLayoutString = function () { _updateLayoutString.apply(this, arguments); drawKbPreview(); refreshChip(); };
+// coin: flavour only. Pressing Enter (or PLAY) drops a coin and starts the game 0.4 s later.
+let coinPending = false;
+function coinSound() {
+    try {
+        initAudio(); const t = actx.currentTime;
+        [[988, 0], [1319, 0.09]].forEach(([f, d]) => {
+            const o = actx.createOscillator(), g = actx.createGain(); o.type = 'square'; o.frequency.value = f;
+            g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.12, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.16);
+            o.connect(g); g.connect(actx.destination); o.start(t + d); o.stop(t + d + 0.18);
+        });
+    } catch (e) {}
+}
+function insertCoin() {
+    if (STATE.active || coinPending) return;
+    coinPending = true; coinSound();
+    const c = byId('coin-line'); if (c) c.textContent = 'CREDIT 01';
+    setTimeout(() => { coinPending = false; if (c) c.innerHTML = 'INSERT COIN <small>PRESS ENTER</small>'; if (!STATE.active) startGame(); }, 380);
+}
+document.addEventListener('keydown', (e) => {
+    const m = UI.menu; if (!m || m.style.display === 'none' || STATE.active) return;
+    const tag = (e.target && e.target.tagName) || '', s = STATE.screen || 'title';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 'Escape' && s !== 'title') { e.preventDefault(); showScreen('title'); return; }
+    if (s !== 'title') return;
+    if (e.key === 'Enter') { if (tag === 'BUTTON' && e.target.id !== 'btn-start') return; e.preventDefault(); insertCoin(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const order = ['academy', 'contender', 'apex']; let i = order.indexOf(UI.diffSelect.value);
+        setDivision(order[(i + (e.key === 'ArrowRight' ? 1 : 2)) % 3]); e.preventDefault();
+    }
+    else if (e.key === 'h' || e.key === 'H') showScreen('hall');
+    else if (e.key === 's' || e.key === 'S') showScreen('setup');
+    else if (e.key === '?' || e.key === '/') showScreen('howto');
+});
+// progress backup
+function exportProgress() {
+    saveGameData();
+    const out = { app: 'galactic-keystroke', v: 1, save: localStorage.getItem('galactic_keystroke_save'), kb: localStorage.getItem('galactic_kb_size'), prefs: localStorage.getItem('galactic_prefs') };
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out)], { type: 'application/json' })); a.download = 'galactic-progress.json';
+    document.body.appendChild(a); a.click(); a.remove();
+}
+function applyProgress(text) {
+    try {
+        const o = JSON.parse(text); if (!o || o.app !== 'galactic-keystroke' || typeof o.save !== 'string') return false;
+        const s = JSON.parse(o.save); if (!s || typeof s !== 'object') return false;
+        localStorage.setItem('galactic_keystroke_save', o.save);
+        if (o.kb) localStorage.setItem('galactic_kb_size', o.kb);
+        if (o.prefs) localStorage.setItem('galactic_prefs', o.prefs);
+        return true;
+    } catch (e) { return false; }
+}
+function importProgress(ev) {
+    const f = ev.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { if (applyProgress(r.result)) { alert('Progress imported. The game will reload.'); location.reload(); } else alert('That is not a Galactic Keystroke progress file.'); };
+    r.readAsText(f); ev.target.value = '';
+}
+// attract-mode background: drifting stars, falling letters and a little ship that shoots them
+let menuFxRunning = false, menuFxOn = true;
+function setMenuFx(on) { menuFxOn = !!on; savePrefs({ menuFx: !!on }); if (on) startMenuFx(); }
+function startMenuFx() {
+    const cv = byId('menu-fx');
+    if (!cv || menuFxRunning || !menuFxOn || !window.matchMedia || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    menuFxRunning = true;
+    const g = cv.getContext('2d'); let stars = null, letters = [], ship = { x: 0.5, cd: 0 }, bolt = null, last = performance.now();
+    const loop = (t) => {
+        if (!UI.menu || UI.menu.style.display === 'none' || !menuFxOn) { menuFxRunning = false; return; }
+        const W = cv.clientWidth, H = cv.clientHeight, dt = Math.min(50, t - last) / 1000; last = t;
+        if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; stars = null; }
+        if (!stars) stars = Array.from({ length: 70 }, () => ({ x: Math.random() * W, y: Math.random() * H, z: 0.3 + Math.random() }));
+        g.clearRect(0, 0, W, H);
+        stars.forEach(s => { s.y += 30 * s.z * dt; if (s.y > H) { s.y = 0; s.x = Math.random() * W; } g.fillStyle = 'rgba(255,255,255,' + (0.25 + 0.4 * s.z) + ')'; g.fillRect(s.x, s.y, 1.5 * s.z + 0.5, 1.5 * s.z + 0.5); });
+        while (letters.length < 9) letters.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.5, v: 22 + Math.random() * 28, ph: Math.random() * 6, ch: String.fromCharCode(65 + Math.floor(Math.random() * 26)), c: Math.random() < 0.5 ? '#00f3ff' : '#ff0055' });
+        letters.forEach(l => { l.y += l.v * dt; l.x += Math.sin(t / 700 + l.ph) * 14 * dt; });
+        letters = letters.filter(l => l.y < H + 30);
+        g.font = "700 22px 'Oxanium'"; g.textAlign = 'center'; g.textBaseline = 'middle';
+        letters.forEach(l => { g.globalAlpha = 0.35; g.fillStyle = l.c; g.fillText(l.ch, l.x, l.y); }); g.globalAlpha = 1;
+        const tgt = letters.filter(l => l.y > H * 0.25 && l.y < H * 0.8).sort((a, b) => b.y - a.y)[0];
+        if (tgt) ship.x += ((tgt.x / W) - ship.x) * Math.min(1, 3 * dt);
+        ship.cd -= dt;
+        if (tgt && ship.cd <= 0 && Math.abs(tgt.x / W - ship.x) < 0.03) { bolt = { x: tgt.x, y: tgt.y, life: 0.15 }; letters.splice(letters.indexOf(tgt), 1); ship.cd = 1.4; }
+        if (bolt) { g.strokeStyle = '#00ff66'; g.globalAlpha = 0.6; g.lineWidth = 2; g.beginPath(); g.moveTo(ship.x * W, H - 28); g.lineTo(bolt.x, bolt.y); g.stroke(); g.globalAlpha = 1; bolt.life -= dt; if (bolt.life <= 0) bolt = null; }
+        g.fillStyle = 'rgba(0,243,255,0.55)'; g.beginPath(); g.moveTo(ship.x * W, H - 40); g.lineTo(ship.x * W - 12, H - 16); g.lineTo(ship.x * W + 12, H - 16); g.closePath(); g.fill();
+        requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+}
+function initMenu() {
+    const p = prefs(); menuFxOn = p.menuFx !== false;
+    const fx = byId('chk-menufx'); if (fx) fx.checked = menuFxOn;
+    setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
+    showScreen(p.seenHowTo ? 'title' : 'howto');
+    startMenuFx();
+}
+
 // Restore saved layout, records and typing statistics when the page opens.
 loadGameData();
+initMenu();
