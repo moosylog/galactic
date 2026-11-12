@@ -19,7 +19,7 @@ function makeEnv(diff, store = {}) {
     id === 'hwSelect' ? { value: 'go60' } : id === 'layoutSelect' ? { value: 'qwerty' } :
     id === 'diffSelect' ? { value: diff } : id === 'chk-textassistant' ? { checked: true } : {}));
   const FakeDate = class extends Date { static now() { return clock; } };
-  const win = { innerWidth: 1280, innerHeight: 800, addEventListener: (t, f) => { (listeners['w' + t] = listeners['w' + t] || []).push(f); }, AudioContext: function () { return mk(); } };
+  const win = { location: { reload() { win.reloaded = true; } }, innerWidth: 1280, innerHeight: 800, addEventListener: (t, f) => { (listeners['w' + t] = listeners['w' + t] || []).push(f); }, AudioContext: function () { return mk(); } };
   const ctx = {
     console, Math, JSON, Object, Array, String, Number, Set, Map, Promise, Symbol, Proxy, Date: FakeDate,
     window: win, navigator: { clipboard: null },
