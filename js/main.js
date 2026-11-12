@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -70,20 +70,21 @@ function loadGameData() {
             if (save.records && Array.isArray(save.records.recent)) STATE.records = { best: save.records.best || null, recent: save.records.recent.slice(0, 10) };
             else if (Array.isArray(save.highScores) && save.highScores.length) STATE.records = { best: save.highScores.slice().sort((a, b) => b.score - a.score)[0], recent: [] };
             if (save.bigrams && typeof save.bigrams === "object") STATE.bigrams = save.bigrams;
-            if (save.isCustom) {
-                if (!Array.isArray(save.customArray)) throw new Error("Corrupted custom array");
-                UI.hwSelect.value = save.baseHardware || 'go60';
-                UI.layoutSelect.value = 'custom';
-                customLayoutArray = save.customArray;
-                if (save.customLayers && Array.isArray(save.customLayers.arrays)) { STATE.customLayers = save.customLayers; selectedLayerIdx = save.layerIdx | 0; showLayerSelect(); }
-                if(!UI.layoutSelect.querySelector('option[value="custom"]')) {
-                    let opt = document.createElement('option'); opt.value = 'custom'; opt.textContent = 'Custom JSON Loaded'; UI.layoutSelect.appendChild(opt);
-                }
-                UI.uploadBtn.textContent = '✅ MOERGO JSON LOADED';
-            } else {
-                if (save.baseHardware) UI.hwSelect.value = save.baseHardware;
-                if (save.layout) UI.layoutSelect.value = save.layout;
+            STATE.customByHw = {};
+            if (save.customByHw && typeof save.customByHw === 'object') {
+                Object.keys(save.customByHw).forEach(h => { const c = save.customByHw[h]; if (validCustom(h, c)) STATE.customByHw[h] = { names: c.names || [], arrays: c.arrays, layerIdx: c.layerIdx | 0 }; });
+            } else if (save.isCustom && Array.isArray(save.customArray)) {
+                // older save: one custom layout for whichever keyboard was selected. Re-link it to the keyboard its size belongs to.
+                const cl = save.customLayers, arrays = (cl && Array.isArray(cl.arrays)) ? cl.arrays : [save.customArray];
+                const first = arrays.find(a => Array.isArray(a) && a.length), hw = first ? hwForLength(first.length, save.baseHardware || 'go60') : null;
+                if (hw) { STATE.customByHw[hw] = { names: (cl && cl.names) || [], arrays, layerIdx: save.layerIdx | 0 }; save.baseHardware = hw; }
             }
+            if (save.baseHardware && DATA.GEO[save.baseHardware]) UI.hwSelect.value = save.baseHardware;
+            applyCustomForHw(UI.hwSelect.value);
+            const want = save.layout || 'qwerty';
+            UI.layoutSelect.value = (want === 'custom' && !customLayoutArray) ? 'qwerty' : want;
+            syncCustomOption(); refreshUploadLabel();
+            if (UI.layoutSelect.value === 'custom') showLayerSelect(); else hideLayerSelect();
         }
     } catch (e) { 
         localStorage.removeItem('galactic_keystroke_save');
@@ -97,7 +98,7 @@ function saveGameData() {
         const payload = {
             version: CURRENT_VERSION, records: STATE.records, bigrams: STATE.bigrams,
             baseHardware: UI.hwSelect.value, layout: UI.layoutSelect.value,
-            customArray: customLayoutArray, isCustom: UI.layoutSelect.value === 'custom', customLayers: STATE.customLayers || null, layerIdx: selectedLayerIdx
+            customByHw: STATE.customByHw
         };
         localStorage.setItem('galactic_keystroke_save', JSON.stringify(payload));
     } catch (e) {}
@@ -245,13 +246,14 @@ function getLayerBindings(data, idx) {
 }
 function showLayerSelect() {
     const sel = document.getElementById('layerSelect'), cl = STATE.customLayers;
-    if (!sel || !cl || !cl.arrays.length) return;
+    if (!sel || !cl || !cl.arrays.length || UI.layoutSelect.value !== 'custom') { if (sel) sel.style.display = 'none'; return; }
     sel.innerHTML = '';
     cl.arrays.forEach((_, i) => { const o = document.createElement('option'); o.value = i; o.textContent = (cl.names && cl.names[i]) || ('Layer ' + i); sel.appendChild(o); });
     sel.value = selectedLayerIdx; sel.style.display = 'block';
 }
 function onLayerChange(v) {
     selectedLayerIdx = +v;
+    const own = STATE.customByHw[UI.hwSelect.value]; if (own) own.layerIdx = selectedLayerIdx;
     const cl = STATE.customLayers;
     if (cl && cl.arrays[selectedLayerIdx] && cl.arrays[selectedLayerIdx].length) {
         customLayoutArray = cl.arrays[selectedLayerIdx].slice();
@@ -280,13 +282,11 @@ function importLayout(data) {
             }
             
             customLayoutArray = arr;
-            if(!UI.layoutSelect.querySelector('option[value="custom"]')) {
-                let opt = document.createElement('option'); opt.value = 'custom'; opt.textContent = 'Custom JSON Loaded'; UI.layoutSelect.appendChild(opt);
-            }
-            UI.layoutSelect.value = 'custom';
+            STATE.customByHw[detectedHw] = STATE.customLayers ? { names: STATE.customLayers.names, arrays: STATE.customLayers.arrays, layerIdx: selectedLayerIdx } : { names: [], arrays: [arr], layerIdx: 0 };
+            syncCustomOption(); UI.layoutSelect.value = 'custom';
             UI.uploadBtn.textContent = '✅ MOERGO JSON LOADED';
             if (bindings.length && bindings.length !== expectedLen) UI.uploadBtn.textContent = '⚠️ LAYER HAS ' + bindings.length + ' KEYS (EXPECTED ' + expectedLen + ')';
-            setTimeout(() => UI.uploadBtn.textContent = "📁 Upload MoErgo json", 3000);
+            setTimeout(refreshUploadLabel, 3000);
             
             updateLayoutString(); saveGameData();
             showLayerSelect();
@@ -1244,6 +1244,44 @@ function initMenu() {
     setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
     showScreen(p.seenHowTo ? 'title' : 'howto');
     startMenuFx();
+}
+
+// ---- a custom layout belongs to the keyboard it was made for ----
+function hwForLength(len, prefer) {
+    if (DATA.GEO[prefer] && DATA.GEO[prefer].length === len) return prefer;
+    return Object.keys(DATA.GEO).find(k => DATA.GEO[k].length === len) || null;
+}
+function validCustom(hw, c) {
+    return !!(DATA.GEO[hw] && c && Array.isArray(c.arrays) && c.arrays.some(a => Array.isArray(a) && a.length === DATA.GEO[hw].length));
+}
+function applyCustomForHw(hw) {
+    const c = STATE.customByHw[hw];
+    if (validCustom(hw, c)) {
+        const n = DATA.GEO[hw].length; let i = c.layerIdx | 0;
+        if (!c.arrays[i] || c.arrays[i].length !== n) i = c.arrays.findIndex(a => Array.isArray(a) && a.length === n);
+        c.layerIdx = i; selectedLayerIdx = i; STATE.customLayers = { names: c.names || [], arrays: c.arrays }; customLayoutArray = c.arrays[i].slice();
+    } else { STATE.customLayers = null; customLayoutArray = null; selectedLayerIdx = 0; }
+}
+function syncCustomOption() {
+    const hw = UI.hwSelect.value, has = validCustom(hw, STATE.customByHw[hw]);
+    let opt = UI.layoutSelect.querySelector('option[value="custom"]');
+    if (!opt && has) { opt = document.createElement('option'); opt.value = 'custom'; UI.layoutSelect.appendChild(opt); }
+    if (opt) { opt.disabled = !has; opt.hidden = !has; opt.textContent = 'Custom JSON (' + (HW_NAMES[hw] || hw) + ')'; }
+}
+function refreshUploadLabel() {
+    const hw = UI.hwSelect.value;
+    UI.uploadBtn.textContent = UI.layoutSelect.value === 'custom' ? '\u2705 ' + (HW_NAMES[hw] || hw).toUpperCase() + ' JSON LOADED' : '\uD83D\uDCC1 Upload MoErgo json';
+}
+function hideLayerSelect() { const s = document.getElementById('layerSelect'); if (s) s.style.display = 'none'; }
+function onHardwareChange() {
+    applyCustomForHw(UI.hwSelect.value);
+    UI.layoutSelect.value = 'qwerty';            // a different keyboard always starts on the default layout
+    syncCustomOption(); refreshUploadLabel(); hideLayerSelect(); updateLayoutString(); saveGameData();
+}
+function onLayoutChange() {
+    if (UI.layoutSelect.value === 'custom') { applyCustomForHw(UI.hwSelect.value); if (customLayoutArray) showLayerSelect(); else UI.layoutSelect.value = 'qwerty'; }
+    else hideLayerSelect();
+    refreshUploadLabel(); updateLayoutString(); saveGameData();
 }
 
 // Restore saved layout, records and typing statistics when the page opens.
