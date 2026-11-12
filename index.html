@@ -142,7 +142,12 @@
                         <label for="progressUpload" class="tab" style="cursor:pointer">IMPORT PROGRESS</label>
                         <input type="file" id="progressUpload" accept=".json" style="display:none" onchange="importProgress(event)">
                     </div>
-                    <div class="cache-reset" onclick="factoryReset()">[ WIPE DATA & RESET CACHE ]</div>
+                    <div class="data-h">RESET</div>
+                    <div class="reset-grid">
+                        <div class="reset-item"><button class="tab" onclick="resetSettings()">RESET SETTINGS</button><span>Keyboard, layout, division, keyboard size and menu animation go back to their defaults. Your records, statistics and saved custom layouts are kept.</span></div>
+                        <div class="reset-item"><button class="tab" onclick="clearWordCache()">CLEAR WORD LIST CACHE</button><span>Forgets the downloaded word list. It is downloaded again the next time the page opens.</span></div>
+                        <div class="reset-item"><button class="tab danger" onclick="factoryReset()">WIPE EVERYTHING</button><span>Deletes records, typing statistics, saved layouts, settings and the word list cache. This cannot be undone. Export a backup first.</span></div>
+                    </div>
                 </div>
             </section>
 

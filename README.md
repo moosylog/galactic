@@ -196,7 +196,9 @@ All settings are in **Setup** on the start screen. **They cannot be changed mid-
 **Data tab**
 - **Export progress** saves a backup file with your records, typing statistics, layout and settings.
 - **Import progress** restores such a file, for example on another computer.
-- **Wipe data and reset cache** deletes your records, statistics and saved layout after a confirmation.
+- **Reset settings** puts the hardware, layout, division, keyboard size and menu animation back to their defaults. Your records, statistics and saved custom layouts are kept.
+- **Clear word list cache** forgets the downloaded word list so it is downloaded again next time.
+- **Wipe everything** deletes records, statistics, saved layouts, settings and the word list cache after a confirmation. It cannot be undone, so export a backup first.
 
 ---
 
@@ -281,12 +283,12 @@ Only letters on the chosen layer are used. Pick another layer, or check the laye
 It scrolls. Making the browser window taller, or zooming out, also helps.
 
 **How do I start over?**
-Use **WIPE DATA & RESET CACHE** in Setup, Data tab. It deletes your records, typing statistics and saved layout settings after a confirmation. Your keyboard size and the cached word list are kept.
+Open **Setup, Data tab** and use **Reset settings** (keeps your records and layouts), **Clear word list cache**, or **Wipe everything** (deletes all saved data after a confirmation).
 
 ---
 
 ## Your data
-Records, typing statistics, your custom layout and the keyboard size are stored **in your browser** (localStorage). Nothing is sent anywhere. The only network request is the one-time download of the word list. Clearing your browser data removes everything. WIPE DATA removes your records, statistics and saved layout (not the keyboard size or the cached word list).
+Records, typing statistics, your custom layout and the keyboard size are stored **in your browser** (localStorage). Nothing is sent anywhere. The only network request is the one-time download of the word list. Clearing your browser data removes everything. Wipe everything in Setup, Data removes all of it.
 
 ---
 
