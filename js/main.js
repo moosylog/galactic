@@ -123,9 +123,22 @@ function renderScoreboard() {
     UI.highScoreList.innerHTML = html;
 }
 
+function resetSettings() {
+    if (!confirm('Reset all settings to their defaults? Your records, statistics and saved custom layouts are kept.')) return;
+    UI.hwSelect.value = 'go60'; applyCustomForHw('go60'); UI.layoutSelect.value = 'qwerty';
+    syncCustomOption(); refreshUploadLabel(); hideLayerSelect(); updateLayoutString();
+    setDivision('contender'); setKbSize('compact');
+    const k = byId('kbSelect'); if (k) k.value = 'compact';
+    const fx = byId('chk-menufx'); if (fx) fx.checked = true; setMenuFx(true);
+    saveGameData(); refreshChip(); drawKbPreview();
+}
+function clearWordCache() {
+    try { localStorage.removeItem('galactic-dict-v1'); } catch (e) {}
+    alert('Word list cache cleared. It will be downloaded again the next time the page opens.');
+}
 function factoryReset() {
-    if(confirm("WARNING: This will wipe all cached hardware data, settings, and high scores. Proceed?")) {
-        localStorage.removeItem('galactic_keystroke_save');
+    if (confirm('WARNING: This deletes ALL saved data: records, typing statistics, saved layouts, settings and the cached word list. This cannot be undone. Proceed?')) {
+        ['galactic_keystroke_save', 'galactic_kb_size', 'galactic_prefs', 'galactic-dict-v1'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
         window.location.reload();
     }
 }
