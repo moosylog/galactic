@@ -90,7 +90,7 @@
                     <div class="settings-grid">
                         <div>
                             <label>Physical Hardware</label>
-                            <select id="hwSelect" onchange="updateLayoutString(); saveGameData();">
+                            <select id="hwSelect" onchange="onHardwareChange()">
                                 <option value="go60" selected>MoErgo Go60</option>
                                 <option value="glove80">MoErgo Glove80</option>
                                 <option value="corne">Corne (42-Key)</option>
@@ -100,7 +100,7 @@
                         </div>
                         <div>
                             <label>Logical Layout</label>
-                            <select id="layoutSelect" onchange="updateLayoutString(); saveGameData();">
+                            <select id="layoutSelect" onchange="onLayoutChange()">
                                 <option value="qwerty">QWERTY</option>
                                 <option value="colemak_dh">Colemak-DH</option>
                                 <option value="dvorak">Dvorak</option>

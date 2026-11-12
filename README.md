@@ -187,7 +187,7 @@ All settings are in **Setup** on the start screen. **They cannot be changed mid-
 - **Hardware:** MoErgo Go60, MoErgo Glove80, Corne (42-key), ZSA Voyager, Standard ANSI 60%.
 - **Logical Layout:** QWERTY, Colemak-DH or Dvorak.
 - A drawn **keyboard preview** shows the letters the game will use.
-- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Only letters on that layer are used for words. Your layout, all its layers and your chosen layer are remembered in your browser, so you do not need to upload the file again. You are warned if the layer does not have the number of keys the hardware expects. *View layout data* shows the raw key list.
+- **Custom layout:** use **Upload MoErgo json** to load a layout exported from the MoErgo/ZMK layout editor. The hardware is detected from the file. A **layer picker** appears so you choose which layer to train (for example your alpha layer). Only letters on that layer are used for words. Your layout, all its layers and your chosen layer are remembered in your browser, so you do not need to upload the file again. **A custom layout belongs to the keyboard it was made for** (Glove80 and Go60 can each keep their own at the same time). When you change the hardware, the layout goes back to **QWERTY**. To use your saved layout again, switch back to its keyboard and pick *Custom JSON (Glove80)* under Logical Layout. You are warned if the layer does not have the number of keys the hardware expects. *View layout data* shows the raw key list.
 
 **Display tab**
 - **Keyboard Size:** Small, Compact or Large (see above).
@@ -270,6 +270,9 @@ On purpose: it stops settings from being changed mid-run. Use **Pause** (Esc) to
 
 **Why does the game pause when I switch tabs?**
 So you cannot lose health while away. Resume with Esc or the RESUME button.
+
+**I changed the keyboard and my custom layout is gone.**
+It is not gone. Switching hardware starts on QWERTY. Switch back to the keyboard your JSON was made for and choose *Custom JSON* in the Logical Layout list.
 
 **Some letters do not appear in my custom layout.**
 Only letters on the chosen layer are used. Pick another layer, or check the layer has the right number of keys.
