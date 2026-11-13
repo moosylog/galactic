@@ -133,6 +133,15 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Bonus UFO** (from wave 4, occasionally, never in Centipede or Challenge waves). A purple three-letter word glides across the top. It is **optional and never listed in the word helper**. Type its first letter and finish it for +300 and EMP charge. If it escapes, nothing happens.
 
+**Next-wave preview.** The bottom right corner above the keyboard shows what comes next, for example *NEXT: BOSS*, *NEXT: CENTIPEDE* or *NEXT: WAVE 7 · TURBO*, so you can get ready.
+
+**Wave modifiers** (about three waves in ten, never in wave 1, boss waves or Challenge Stages). A banner announces the modifier and the corner shows *NOW: ...* while it lasts. The preview tells you one wave ahead.
+- **SLOW-MO:** everything moves about 30% slower.
+- **DOUBLE POINTS:** your score for the wave counts twice.
+- **TURBO:** everything moves about 30% faster and score counts 1.5 times. Not used on Academy.
+
+**Last stand.** When your health drops to 20% or less, the screen edge pulses red, time runs 15% slower and your points count 1.5 times. It switches off when you heal above 20%. It stacks with wave modifiers.
+
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
 
 ---
