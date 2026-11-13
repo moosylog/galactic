@@ -152,7 +152,7 @@ function recordBigramError(expected) {
 function pushAcc(v) { STATE.accWindow.push(v); if (STATE.accWindow.length > 100) STATE.accWindow.shift(); }
 function updateScoreMultiplier() {
     const w = STATE.accWindow; const acc = w.length ? w.reduce((a, v) => a + v, 0) / w.length : 1;
-    STATE.scoreMultiplier = acc === 1 ? 2.0 : acc >= 0.98 ? 1.5 : acc >= 0.95 ? 1.0 : acc >= 0.90 ? 0.5 : 0.1;
+    STATE.scoreMultiplier = (acc === 1 ? 2.0 : acc >= 0.98 ? 1.5 : acc >= 0.95 ? 1.0 : acc >= 0.90 ? 0.5 : 0.1) * (STATE.scoreBoost || 1);
 }
 function showBigramReport() {
     const el = document.getElementById('end-bigrams'); if (!el) return;
@@ -253,4 +253,52 @@ function focusKeySet() { return new Set(weakBigrams().slice(0, 4).join('').split
 function harvestMushrooms() {
     const n = STATE.mushrooms.length; STATE.mushrooms = [];
     if (n > 0) { STATE.score += n * 20; createPopText('MUSHROOM HARVEST +' + (n * 20), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#ff5fb3'); updateUI(); }
+}
+
+// ---- wave preview, wave modifiers and last stand ----
+const WAVE_MODS = {
+    SLOW:   { name: 'SLOW-MO',       tip: 'EVERYTHING IS SLOWER',   speed: 0.7, score: 1,   color: '#00f3ff' },
+    DOUBLE: { name: 'DOUBLE POINTS', tip: 'x2 SCORE',               speed: 1,   score: 2,   color: '#ffea00' },
+    TURBO:  { name: 'TURBO',         tip: 'FASTER, x1.5 SCORE',     speed: 1.3, score: 1.5, color: '#ff0055' }
+};
+function waveKind(n) { return n % 5 === 0 ? 'BOSS' : n % 5 === 3 ? 'CHALLENGE' : n % 4 === 2 ? 'CENTIPEDE' : 'NORMAL'; }
+// Decided from the run's seed and the wave number, so the preview can show it before the wave starts.
+function waveMod(n) {
+    if (n < 2 || waveKind(n) === 'BOSS' || waveKind(n) === 'CHALLENGE') return null;
+    let h = (Math.imul(STATE.modSeed | 0, 2654435761) + Math.imul(n, 40503)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489917) >>> 0; h = (h ^ (h >>> 16)) >>> 0;
+    const r = (h % 1000) / 1000;
+    if (r < 0.08) return 'SLOW';
+    if (r < 0.20) return 'DOUBLE';
+    if (r < 0.30 && STATE.difficulty !== 'academy') return 'TURBO';
+    return null;
+}
+function nextWaveText() {
+    const n = (STATE.wave || 1) + 1, k = waveKind(n), m = waveMod(n);
+    return 'NEXT: ' + (k === 'NORMAL' ? 'WAVE ' + n : k) + (m ? '  \u00B7  ' + WAVE_MODS[m].name : '');
+}
+function refreshBoost() {
+    STATE.scoreBoost = (STATE.waveBoost || 1) * (STATE.lastStand ? 1.5 : 1);
+    updateScoreMultiplier();
+}
+function applyWaveMod() {
+    const id = waveMod(STATE.wave), m = id ? WAVE_MODS[id] : null;
+    STATE.waveModId = id; STATE.speedMod = m ? m.speed : 1; STATE.waveBoost = m ? m.score : 1;
+    refreshBoost();
+    if (m) createPopText(m.name + '! ' + m.tip, canvas.width / 2, canvas.height / 2 - 100 * STATE.sf, m.color);
+}
+function clearWaveMod() { STATE.waveModId = null; STATE.speedMod = 1; STATE.waveBoost = 1; refreshBoost(); }
+// Below 20% health: time runs 15% slower and points count 1.5x.
+function checkLastStand() {
+    const ls = STATE.hull > 0 && STATE.hull <= 20;
+    if (ls === !!STATE.lastStand) return;
+    STATE.lastStand = ls; refreshBoost();
+    if (ls) createPopText('LAST STAND! SLOWER TIME, x1.5 SCORE', canvas.width / 2, canvas.height / 2 - 140 * STATE.sf, '#ff0055');
+}
+function drawLastStand(ctx, time) {
+    if (!STATE.lastStand) return;
+    const W = canvas.width, H = canvas.height, a = 0.16 + 0.1 * Math.sin(time / 220);
+    ctx.save(); const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.85);
+    g.addColorStop(0, 'rgba(255,0,60,0)'); g.addColorStop(1, 'rgba(255,0,60,' + (a * 2) + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }

@@ -399,7 +399,10 @@ function drawShipHUD(time) {
     else if (STATE.currentTarget) { const gn = enemies.find(e => e.wordId === STATE.currentTarget.wordId && e.index === STATE.currentTarget.index && e.active && !e.targeted); if (gn) guide.add(gn.char); }
     else enemies.forEach(e => { if (!e.isBoss && e.index === 0 && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); });
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
-    ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf); ctx.restore();
+    ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
+    ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
+    if (STATE.waveModId) { ctx.fillStyle = WAVE_MODS[STATE.waveModId].color; ctx.fillText('NOW: ' + WAVE_MODS[STATE.waveModId].name, canvas.width - 12 * STATE.sf, splitLine - 48 * STATE.sf); }
+    ctx.restore();
     for (let char in STATE.activeKeys) {
         let k = STATE.activeKeys[char];
         if(k.isAbducted) continue; 
@@ -604,7 +607,7 @@ function spawnWave() {
     
     STATE.currentTarget = null; STATE.isSpawning = false;
     let isBossWave = (STATE.wave > 0 && STATE.wave % 5 === 0);
-    STATE.challenge = false; STATE.focusBigram = null; STATE.snakeWave = false;
+    STATE.challenge = false; STATE.focusBigram = null; STATE.snakeWave = false; clearWaveMod();
     
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
@@ -616,6 +619,7 @@ function spawnWave() {
     } else {
         STATE.challenge = (STATE.wave % 5 === 3); STATE.focusKeys = focusKeySet();
         STATE.snakeWave = (STATE.wave % 4 === 2 && !STATE.challenge);
+        applyWaveMod();
         if (!STATE.daily && (STATE.challenge || STATE.wave % 3 === 0)) { const wb = weakBigrams(); if (wb.length) STATE.focusBigram = wb[Math.floor(Math.random() * Math.min(3, wb.length))]; }
         createPopText(STATE.challenge ? 'CHALLENGE STAGE: NO DAMAGE, PERFECT = 2x' : `WAVE ${STATE.wave} INITIATED`, canvas.width/2, canvas.height/2, STATE.challenge ? '#bc13fe' : '#00f3ff');
         if (STATE.focusBigram) createPopText('FOCUS: ' + STATE.focusBigram.toUpperCase(), canvas.width/2, canvas.height/2 + 50*STATE.sf, '#ffea00');
@@ -736,6 +740,7 @@ function gameLoop(time) {
     if (STATE.paused) { STATE.lastFrame = time; requestAnimationFrame(gameLoop); return; }
     
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
+    checkLastStand(); if (STATE.lastStand) dt *= 0.85;
 
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
     let spaceGrad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height, 0, bgCanvas.width/2, bgCanvas.height, bgCanvas.height);
@@ -841,7 +846,7 @@ function gameLoop(time) {
             }
         }
 
-        updateSnakes(dt); drawSnakes(ctx, time); drawMushrooms(ctx);
+        updateSnakes(dt); drawSnakes(ctx, time); drawMushrooms(ctx); drawLastStand(ctx, time);
         for(let i=enemies.length-1; i>=0; i--) { if(!enemies[i].active) enemies.splice(i, 1); else { enemies[i].update(dt, time); enemies[i].draw(ctx, dt); } }
         for(let i=bonusDrones.length-1; i>=0; i--) { if(!bonusDrones[i].active) bonusDrones.splice(i, 1); else { bonusDrones[i].update(dt); bonusDrones[i].draw(ctx); } }
         for(let i=lasers.length-1; i>=0; i--) { if(!lasers[i].active) lasers.splice(i, 1); else { lasers[i].update(dt); lasers[i].draw(ctx); } }
@@ -875,6 +880,7 @@ function gameLoop(time) {
 function startGame() {
     initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
+    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];

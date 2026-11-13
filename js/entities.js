@@ -409,7 +409,7 @@ class SwarmEnemy {
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
         let waveScale = Math.min(0.3, STATE.wave * 0.015); 
-        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150));
+        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150)) * (STATE.speedMod || 1);
 
         if (this.state === 'ufo') {
             this.x += this.vx * (dt / 16);
@@ -439,7 +439,7 @@ class SwarmEnemy {
             if (p >= 1) this.state = STATE.challenge ? 'fly' : 'hover';
         }
         else if (this.state === 'hover') {
-            this.formY += 0.2 * STATE.sf * (dt/16);
+            this.formY += 0.2 * STATE.sf * (dt/16) * (STATE.speedMod || 1);
             this.x = this.formX + Math.sin(time/900 + (this.slot || 0)) * (8 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
@@ -670,7 +670,7 @@ function updateSnakes(dt) {
         s.letters = alive;
         if (alive.length === 0) { snakes.splice(i, 1); continue; }
         const row = Math.max(0, Math.floor(s.d / g.P));
-        s.d += base * s.mul * (1 + 0.10 * row) * (dt / 1000);
+        s.d += base * s.mul * (1 + 0.10 * row) * (STATE.speedMod || 1) * (dt / 1000);
         alive.forEach(l => { const p = snakePos(s.right, s.d - l.snakeSlot * sp); l.x = p.x; l.y = p.y; });
     }
 }
