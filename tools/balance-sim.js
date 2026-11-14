@@ -5,6 +5,7 @@ const { makeEnv } = require('./harness');
 const RUNS = +process.argv[2] || 3, MAX_S = +process.argv[3] || 600;
 function play(diff, wpm, acc) {
   const env = makeEnv(diff);
+  if (process.env.CURVE) env.run('Object.assign(CURVE, ' + process.env.CURVE + ')');
   env.run('startGame()');
   const gap = 60000 / (wpm * 5); let nextKey = env.now() + 500, ticks = 0, minHull = 100, snakeSeen = 0;
   const maxTicks = MAX_S * 1000 / 16;
@@ -22,7 +23,8 @@ function play(diff, wpm, acc) {
   return { ...out, snakeSeen, minHull, secs: Math.round((env.now() - 1000) / 1000), dead };
 }
 
-const profiles = process.env.WEAK ? [['academy', 10, 0.75, 'weak 10 wpm 75%'], ['apex', 30, 0.85, 'weak 30 wpm 85%'], ['apex', 140, 0.995, 'pro 140 wpm 99.5%']] : [
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',').map(x => { const [d, w, a] = x.split(':'); return [d, +w, +a, w + ' wpm ' + Math.round(a * 1000) / 10 + '%']; }) : null;
+const profiles = ONLY ? ONLY : process.env.WEAK ? [['academy', 10, 0.75, 'weak 10 wpm 75%'], ['apex', 30, 0.85, 'weak 30 wpm 85%'], ['apex', 140, 0.995, 'pro 140 wpm 99.5%']] : [
   ['academy', 15, 0.88, 'beginner 15 wpm 88%'], ['academy', 30, 0.94, 'casual 30 wpm 94%'], ['academy', 50, 0.96, 'good 50 wpm 96%'],
   ['contender', 30, 0.94, 'casual 30 wpm 94%'], ['contender', 50, 0.96, 'good 50 wpm 96%'], ['contender', 80, 0.97, 'fast 80 wpm 97%'],
   ['apex', 50, 0.96, 'good 50 wpm 96%'], ['apex', 80, 0.97, 'fast 80 wpm 97%'], ['apex', 110, 0.98, 'elite 110 wpm 98%'], ['apex', 140, 0.995, 'pro 140 wpm 99.5%']

@@ -5,6 +5,7 @@ const ROOT = process.env.ROOT || path.join(__dirname, '..');
 const read = f => { let t = fs.readFileSync(path.join(ROOT, f), 'utf8'); if (process.env.NOSNAKE) t = t.replace('STATE.snakeWave = (STATE.wave % 4 === 2 && !STATE.challenge);', 'STATE.snakeWave = false;'); return t; };
 
 function makeEnv(diff, store = {}) {
+  let hadDiv = false; try { hadDiv = !!JSON.parse(store.galactic_prefs || '{}').div; } catch (e) {}   // read before the game's own start-up code runs
   let clock = 1000, raf = null, timers = [], listeners = {};
   const mk = (init = {}) => {
     const props = { style: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, value: '', checked: false, textContent: '', innerHTML: '', children: [], ...init };
@@ -34,6 +35,8 @@ function makeEnv(diff, store = {}) {
   vm.createContext(ctx);
   if (process.env.WORDS) store['galactic-dict-v1'] = fs.readFileSync(process.env.WORDS, 'utf8');
   for (const f of ['js/config.js', 'js/entities.js', 'js/main.js']) vm.runInContext(read(f), ctx, { filename: f });
+  // the start screen restores the saved division on load; a fresh browser has none, so choose the requested one
+  if (diff && !hadDiv) vm.runInContext(`setDivision(${JSON.stringify(diff)})`, ctx);
   vm.runInContext(`function botKey(acc) {
     const W = canvas.width, H = canvas.height; let expected = null, think = 0;
     if (STATE.bossRef && STATE.bossRef.active) {
