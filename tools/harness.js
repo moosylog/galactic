@@ -34,7 +34,7 @@ function makeEnv(diff, store = {}) {
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   if (process.env.WORDS) store['galactic-dict-v1'] = fs.readFileSync(process.env.WORDS, 'utf8');
-  for (const f of ['js/config.js', 'js/entities.js', 'js/main.js']) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ['js/config.js', 'js/entities.js', 'js/music.js', 'js/main.js']) vm.runInContext(read(f), ctx, { filename: f });
   // the start screen restores the saved division on load; a fresh browser has none, so choose the requested one
   if (diff && !hadDiv) vm.runInContext(`setDivision(${JSON.stringify(diff)})`, ctx);
   vm.runInContext(`function botKey(acc) {
