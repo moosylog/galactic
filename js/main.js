@@ -130,6 +130,7 @@ function resetSettings() {
     setDivision('contender'); setKbSize('compact');
     const k = byId('kbSelect'); if (k) k.value = 'compact';
     const fx = byId('chk-menufx'); if (fx) fx.checked = true; setMenuFx(true);
+    const mc = byId('chk-music'); if (mc) mc.checked = true; setMusic(true);
     saveGameData(); refreshChip(); drawKbPreview();
 }
 function clearWordCache() {
@@ -713,7 +714,7 @@ function damagePlayer(amt) {
     STATE.hull -= amt; STATE.combo = 0; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 300);
     AudioFX.error(); updateUI();
     if(STATE.hull <= 0) { 
-        STATE.active = false; setControls(false);
+        STATE.active = false; setControls(false); Music.stop();
         recordRun();
         saveGameData(); renderScoreboard();
         
@@ -747,7 +748,7 @@ function gameLoop(time) {
     if (STATE.paused) { STATE.lastFrame = time; requestAnimationFrame(gameLoop); return; }
     
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
-    checkLastStand(); if (STATE.lastStand) dt *= 0.85;
+    checkLastStand(); if (STATE.lastStand) dt *= 0.85; Music.update();
 
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
     let spaceGrad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height, 0, bgCanvas.width/2, bgCanvas.height, bgCanvas.height);
@@ -889,7 +890,7 @@ function gameLoop(time) {
 function startGame() {
     initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
-    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod();
+    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); Music.start();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
@@ -1087,7 +1088,7 @@ document.addEventListener('keydown', (e) => {
 function setControls(show) { const g = document.getElementById('game-controls'); if (g) g.style.display = show ? 'flex' : 'none'; }
 function pauseGame() {
     if (!STATE.active || STATE.paused) return;
-    STATE.paused = true; STATE.pausedAt = performance.now();
+    STATE.paused = true; STATE.pausedAt = performance.now(); Music.duck(true);
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'flex';
 }
 function resumeGame() {
@@ -1095,7 +1096,7 @@ function resumeGame() {
     const ms = performance.now() - STATE.pausedAt;
     STATE.startTime += ms; STATE.taFadeOutTime += ms; STATE.waveStartAt += ms;
     lastKeyPress = performance.now(); lastGoodChar = null;
-    STATE.paused = false; STATE.lastFrame = performance.now();
+    STATE.paused = false; STATE.lastFrame = performance.now(); Music.duck(false);
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
 }
 function exitToMenu() {
@@ -1103,7 +1104,7 @@ function exitToMenu() {
     const wasPaused = STATE.paused;
     if (!wasPaused) pauseGame();
     if (!confirm('Exit to the main screen? This run ends without a score and cannot be resumed.')) { if (!wasPaused) resumeGame(); return; }
-    STATE.active = false; STATE.paused = false; STATE.runId = (STATE.runId || 0) + 1;
+    STATE.active = false; STATE.paused = false; STATE.runId = (STATE.runId || 0) + 1; Music.stop();
     enemies = []; snakes = []; STATE.mushrooms = []; STATE.bossRef = null; STATE.currentTarget = null;
     setControls(false);
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
@@ -1238,6 +1239,7 @@ function importProgress(ev) {
 }
 // attract-mode background: drifting stars, falling letters and a little ship that shoots them
 let menuFxRunning = false, menuFxOn = true;
+function setMusic(on) { Music.on = !!on; savePrefs({ music: !!on }); if (!on) Music.stop(); else if (STATE.active && !STATE.paused) Music.start(); }
 function setMenuFx(on) { menuFxOn = !!on; savePrefs({ menuFx: !!on }); if (on) startMenuFx(); }
 function startMenuFx() {
     const cv = byId('menu-fx');
@@ -1269,6 +1271,7 @@ function startMenuFx() {
 function initMenu() {
     const p = prefs(); menuFxOn = p.menuFx !== false;
     const fx = byId('chk-menufx'); if (fx) fx.checked = menuFxOn;
+    Music.on = p.music !== false; const mc = byId('chk-music'); if (mc) mc.checked = Music.on;
     setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
     showScreen(p.seenHowTo ? 'title' : 'howto');
     startMenuFx();
