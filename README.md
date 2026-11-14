@@ -140,6 +140,8 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 - **DOUBLE POINTS:** your score for the wave counts twice.
 - **TURBO:** everything moves about 30% faster and score counts 1.5 times. Not used on Academy.
 
+**The wave clock.** From wave 3 the next wave arrives on a timer, whether or not you cleared the last one. The thin bar just above the danger line, with *NEXT:* beside it, shows the time left. When it runs out, any letters you left behind **dive at once** and the next wave arrives. The time allowed is what a typist at the *required speed* would need for the wave's letters. That required speed starts low and rises every wave, faster on Apex than on Contender and Academy. If you keep up, you never notice the clock. If you fall behind, the leftovers pile up and attack, up to 40 letters on screen. Waves 1 and 2, boss waves, Challenge Stages and the wave before a boss have no clock and must be cleared. This is what makes a run end: everybody is eventually outpaced, and the ranking is how far you get.
+
 **Last stand.** When your health drops to 20% or less, the screen edge pulses red, time runs 15% slower and your points count 1.5 times. It switches off when you heal above 20%. It stacks with wave modifiers.
 
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
@@ -152,21 +154,21 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 | Event | Effect |
 |---|---|
-| A letter reaches the danger line | −5 (Academy), −8 (Contender), −10 (Apex). Blocked by a shield. None in Challenge Stages. |
-| Boss strike (you stopped typing) | −10 |
+| A letter reaches the danger line | −5 (Academy), −8 (Contender), −10 (Apex), plus 1 more for every 10 waves. Blocked by a shield. None in Challenge Stages. |
+| Boss strike (you stopped typing) | −10, plus 1 more for every 10 waves. The strike timer also shortens as waves pass. |
 | Boss rescue: typo | −2 |
 | Boss rescue: word falls past the line | −5 |
 | A typo in a normal wave | −1 (it can never take you below 1%) |
-| Clearing a boss sector | +20 |
-| A perfect wave | +5 |
-| Every 50 combo | +5 |
+| Clearing a boss sector | +20 (Academy), +12 (Contender), +8 (Apex) |
+| A perfect wave | +5 (Academy), +3 (Contender), +2 (Apex) |
+| Every 50 combo | +5 (Academy), +3 (Contender), +2 (Apex) |
 
 ### Score
 
-- **Each letter you shoot** = (100 + 10 × your current combo) × the **accuracy multiplier** × the **difficulty multiplier**.
+- **Each letter you shoot** = (100 + 10 × your current combo) × the **accuracy multiplier** × the **difficulty multiplier**. The combo part stops growing at a combo of 50, so one long streak cannot run away with the score.
 - **Accuracy multiplier** (your last 100 keystrokes): 100% ×2, 98%+ ×1.5, 95%+ ×1, 90%+ ×0.5, below 90% ×0.1.
 - **Difficulty multiplier:** Academy ×1, Contender ×2, Apex ×3.
-- **Word bonuses:** CLEAN (no mistakes) +10 per letter; BLAZING (clean and well above your usual speed) +25 more per letter; golden word +100 per letter; UFO +300.
+- **Word bonuses** (all multiplied by the difficulty multiplier): CLEAN (no mistakes) +10 per letter; BLAZING (clean and well above your usual speed) +25 more per letter; golden word +100 per letter; UFO +300.
 - **Boss:** finishing a boss pays 500 × the multipliers.
 - **Perfect wave:** 1,000 × the wave number × the difficulty multiplier (doubled in a Challenge Stage).
 - **EMP:** 50 points for each letter it clears.
@@ -184,7 +186,7 @@ Scores are only comparable within the same difficulty.
 | **Contender** | 4 to 7 | About 4 s | ×2 | Common words, widening faster. |
 | **Apex** | 5 to 8 | About 1.5 s | ×3 | A wide pool from the start. |
 
-On every level on **Apex** words get one letter longer every 8 waves (up to two extra, capped at 8), and on every level rarer words are mixed in as waves progress, letters fall faster as you play, and the speed also follows your typing speed.
+On every level on **Apex** words get one letter longer every 8 waves (up to two extra, capped at 8), and on every level rarer words are mixed in as waves progress, letters keep falling faster and diving sooner as you play, with no upper limit on the waves, and the speed also follows your typing speed.
 
 ---
 
