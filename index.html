@@ -133,6 +133,10 @@
                             <label>Menu Animation</label>
                             <label class="check-row"><input type="checkbox" id="chk-menufx" checked onchange="setMenuFx(this.checked)"> Moving stars on the menu</label>
                         </div>
+                        <div>
+                            <label>Music</label>
+                            <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music that builds with your combo</label>
+                        </div>
                     </div>
                 </div>
                 <div class="tabpanel" id="tab-data" style="display:none">
@@ -193,6 +197,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/music.js"></script>
 <script src="js/main.js"></script>
 <div id="game-controls" style="position:fixed;bottom:6px;left:8px;z-index:20;display:none;gap:8px">
         <button class="ctl" id="btn-pause" onclick="pauseGame()">PAUSE (ESC)</button>

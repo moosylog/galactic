@@ -144,6 +144,8 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Last stand.** When your health drops to 20% or less, the screen edge pulses red, time runs 15% slower and your points count 1.5 times. It switches off when you heal above 20%. It stacks with wave modifiers.
 
+**Music.** A short loop plays during the game and follows your play. It starts with just the beat. At a combo of **10** a bass line joins, at **25** an arpeggio, at **50** a lead melody. **They all drop out the moment you slip**, so a clean streak is something you can hear. The tempo rises slowly as waves pass and speeds up a little during bosses. In last stand the music is muffled. Pausing silences it. Switch it off in Setup, Display.
+
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
 
 ---
@@ -203,6 +205,7 @@ All settings are in **Setup** on the start screen. **They cannot be changed mid-
 **Display tab**
 - **Keyboard Size:** Small, Compact or Large (see above).
 - **Menu Animation:** the moving stars on the start screen.
+- **Music:** the music that builds with your combo (on by default).
 
 **Data tab**
 - **Export progress** saves a backup file with your records, typing statistics, layout and settings.
@@ -308,6 +311,7 @@ Records, typing statistics, your custom layout and the keyboard size are stored 
   - `index.html`, `css/styles.css`
   - `js/config.js` (hardware geometry, difficulty, words, helpers)
   - `js/entities.js` (enemies, boss, lasers)
+  - `js/music.js` (the combo-driven music)
   - `js/main.js` (game loop, input, interface, records)
 - **Tests:** `npm test` runs the smoke, practice and pacing tests.
 - **Balance tool:** `node tools/balance-sim.js` runs the real game code headlessly with scripted typists of different skill and prints survival, waves and score. Use it to tune difficulty before changing numbers.
