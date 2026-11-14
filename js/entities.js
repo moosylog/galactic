@@ -24,9 +24,9 @@ class BossShip {
         if (this.state === 'idle') {
             if (this.typedIndex !== this.lastIdx) { this.lastIdx = this.typedIndex; this.idleTime = 0; this.warned = false; }
             this.idleTime = (this.idleTime || 0) + dt;
-            const lim = 4000 + this.word.length * 1200;
+            const lim = (4000 + this.word.length * 1200) * Math.max(0.5, 1 - (STATE.wave || 1) * CURVE.bossTimerDecay);
             if (this.idleTime > lim * 0.7 && !this.warned) { this.warned = true; createPopText("BOSS CHARGING!", this.x, this.y + 60 * STATE.sf, '#ffea00'); AudioFX.boss(); }
-            if (this.idleTime > lim) { this.idleTime = 0; this.warned = false; damagePlayer(10); createPopText("BOSS STRIKE!", this.x, this.y + 60 * STATE.sf, '#ff0055'); }
+            if (this.idleTime > lim) { this.idleTime = 0; this.warned = false; damagePlayer(10 + Math.floor((STATE.wave || 1) * CURVE.dmgPerWave)); createPopText("BOSS STRIKE!", this.x, this.y + 60 * STATE.sf, '#ff0055'); }
         }
         if (this.state === 'enter') {
             this.y += (this.targetY - this.y) * 0.05 * (dt/16);
@@ -408,7 +408,7 @@ class SwarmEnemy {
 
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
-        let waveScale = Math.min(0.3, STATE.wave * 0.015); 
+        let waveScale = Math.min(CURVE.speedCap, STATE.wave * curveOf(CURVE.speedPerWave)); 
         let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150)) * (STATE.speedMod || 1);
 
         if (this.state === 'ufo') {
@@ -444,9 +444,9 @@ class SwarmEnemy {
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
             this.hoverT = (this.hoverT || 0) + dt;
-            let diveChance = 0.0005 + (STATE.wave * 0.0002);
+            let diveChance = 0.0005 + (STATE.wave * curveOf(CURVE.diveGrowth));
             if (enemies.length <= 8) diveChance += diff.rush;
-            if (this.hoverT > diff.grace && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
+            if (this.hoverT > graceMs(diff) && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
         }
         else if (this.state === 'snake') { /* position is driven by updateSnakes() */ }
         else if (this.state === 'fly') {
@@ -460,7 +460,7 @@ class SwarmEnemy {
         }
 
         let splitLine = canvas.height - hudHeight();
-        if(this.y > splitLine) { this.active = false; this.crossed = true; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(diff.missDmg); } createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; this.crossed = true; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(missDamage(diff)); } createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {
@@ -609,7 +609,7 @@ class Laser {
             }
             
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod;
-            STATE.score += Math.floor((100 + this.hitCombo * 10) * STATE.scoreMultiplier * diffScoreMod); 
+            STATE.score += Math.floor((100 + Math.min(this.hitCombo, CURVE.comboCap) * 10) * STATE.scoreMultiplier * diffScoreMod); 
             addEmpCharge(5 + this.hitCombo); updateUI(); return;
         }
         this.x += (dx/dist) * this.speed * (dt/16); this.y += (dy/dist) * this.speed * (dt/16);

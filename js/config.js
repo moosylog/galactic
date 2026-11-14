@@ -180,25 +180,25 @@ function comboMilestone() {
     const n = STATE.combo;
     if (n > 0 && n % 25 === 0) {
         createPopText(n + 'x COMBO!', canvas.width / 2, canvas.height / 2 - 90 * STATE.sf, '#ffea00');
-        addEmpCharge(15); if (n % 50 === 0) STATE.hull = Math.min(100, STATE.hull + 5);
+        addEmpCharge(15); if (n % 50 === 0) STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healCombo));
         AudioFX.bonus(); updateUI();
     }
 }
 function wordComplete(t, word, now) {
     if (STATE.ufoId && t.wordId === STATE.ufoId) {
-        STATE.ufoId = null; STATE.score += 300; addEmpCharge(30); AudioFX.bonus();
+        STATE.ufoId = null; STATE.score += 300 * diffMod(); addEmpCharge(30); AudioFX.bonus();
         createPopText('UFO DOWN! +300', canvas.width / 2, canvas.height / 2 + 190 * STATE.sf, '#c77dff');
     }
     if (!t.full || t.dirty) return;
     if (STATE.goldenId && t.wordId === STATE.goldenId) {
-        STATE.goldenId = null; STATE.score += 100 * word.length; STATE.shield = true; AudioFX.bonus();
+        STATE.goldenId = null; STATE.score += 100 * word.length * diffMod(); STATE.shield = true; AudioFX.bonus();
         createPopText('GOLDEN WORD! SHIELD READY', canvas.width / 2, canvas.height / 2 + 150 * STATE.sf, '#ffd700');
     }
     const ms = now - t.t0; if (ms <= 0) return;
     const wpm = (word.length / 5) / (ms / 60000);
-    STATE.score += 10 * word.length;
+    STATE.score += 10 * word.length * diffMod();
     if (wpm >= Math.max(60, STATE.currentWPM * 1.15)) {
-        STATE.score += 25 * word.length; addEmpCharge(5);
+        STATE.score += 25 * word.length * diffMod(); addEmpCharge(5);
         createPopText('BLAZING ' + Math.round(wpm) + ' WPM', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00ff66');
     } else if (word.length >= 5) createPopText('CLEAN', canvas.width / 2, canvas.height / 2 + 120 * STATE.sf, '#00f3ff');
 }
@@ -252,7 +252,7 @@ function focusKeySet() { return new Set(weakBigrams().slice(0, 4).join('').split
 // Mushrooms left by shot snake letters are harvested when the next wave starts.
 function harvestMushrooms() {
     const n = STATE.mushrooms.length; STATE.mushrooms = [];
-    if (n > 0) { STATE.score += n * 20; createPopText('MUSHROOM HARVEST +' + (n * 20), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#ff5fb3'); updateUI(); }
+    if (n > 0) { STATE.score += n * 20 * diffMod(); createPopText('MUSHROOM HARVEST +' + (n * 20 * diffMod()), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#ff5fb3'); updateUI(); }
 }
 
 // ---- wave preview, wave modifiers and last stand ----
@@ -302,3 +302,33 @@ function drawLastStand(ctx, time) {
     g.addColorStop(0, 'rgba(255,0,60,0)'); g.addColorStop(1, 'rgba(255,0,60,' + (a * 2) + ')');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }
+
+// ---- the difficulty curve: every number that makes the game harder over time lives here ----
+const CURVE = {
+    // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.
+    // The time allowed is reqBaseMs plus the time a typist at the required speed needs for the wave's letters.
+    // Required speed per division = [start, WPM added per wave], capped at reqCap.
+    reqWpm: { academy: [12, 3.2], contender: [60, 4.0], apex: [70, 4.5] }, reqCap: 700, reqBaseMs: 1500, letterCap: 40,
+    speedPerWave: { academy: 0.10, contender: 0.06, apex: 0.045 }, speedCap: 5,    // letters get faster every wave
+    diveGrowth: { academy: 0.0012, contender: 0.001, apex: 0.0012 },                  // how eager letters are to dive (per wave)
+    graceDecay: 0.01, graceMin: 0.4,               // hover time before a dive shrinks by this share of its base per wave (floor)
+    dmgPerWave: 0.1,                               // extra health lost per missed letter or boss strike, per wave
+    bossTimerDecay: 0.005,                         // the boss strike timer shrinks by this share per wave (floor 50%)
+    fourthWord: { academy: 999, contender: 21, apex: 13 },    // wave from which a 4th word appears
+    healSector: { academy: 20, contender: 12, apex: 8 },      // health restored when a sector is cleared
+    healPerfect: { academy: 5, contender: 3, apex: 2 },       // health restored by a perfect wave
+    healCombo: { academy: 5, contender: 3, apex: 2 },         // health restored every 50 combo
+    comboCap: 50                                   // the combo bonus per letter stops growing at this combo
+};
+function reqWpm(wave) { const [a, b] = curveOf(CURVE.reqWpm); return Math.min(CURVE.reqCap, a + b * (wave || 1)); }
+function waveAllowedMs() { return CURVE.reqBaseMs + (STATE.waveLetters || 0) * 12000 / reqWpm(STATE.wave); }
+// Waves 1 and 2, boss waves, challenge stages and the wave before a boss must be cleared; every other wave runs on the clock.
+function waveClockApplies() { const w = STATE.wave || 1; return w >= 3 && w % 5 !== 0 && (w + 1) % 5 !== 0 && !STATE.challenge; }
+function waveClockFraction() {
+    if (!STATE.active || !waveClockApplies() || !STATE.waveStartAt) return null;
+    return Math.max(0, 1 - (performance.now() - STATE.waveStartAt) / waveAllowedMs());
+}
+function graceMs(diff) { return diff.grace * Math.max(CURVE.graceMin, 1 - (STATE.wave || 1) * CURVE.graceDecay); }
+function missDamage(diff) { return diff.missDmg + Math.floor((STATE.wave || 1) * CURVE.dmgPerWave); }
+function curveOf(table) { return table[STATE.difficulty || 'contender']; }
+function diffMod() { return DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod; }

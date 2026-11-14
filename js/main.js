@@ -401,6 +401,12 @@ function drawShipHUD(time) {
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
     ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
     ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
+    const clock = waveClockFraction();
+    if (clock !== null) {
+        const bw = Math.min(canvas.width * 0.5, 360 * STATE.sf), bx = canvas.width - 12 * STATE.sf - bw, by = splitLine - 64 * STATE.sf;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bx, by, bw, 4 * STATE.sf);
+        ctx.fillStyle = clock > 0.35 ? '#00f3ff' : '#ff0055'; ctx.fillRect(bx, by, bw * clock, 4 * STATE.sf);
+    }
     if (STATE.waveModId) { ctx.fillStyle = WAVE_MODS[STATE.waveModId].color; ctx.fillText('NOW: ' + WAVE_MODS[STATE.waveModId].name, canvas.width - 12 * STATE.sf, splitLine - 48 * STATE.sf); }
     ctx.restore();
     for (let char in STATE.activeKeys) {
@@ -602,7 +608,7 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
 }
 
 function spawnWave() {
-    harvestMushrooms();
+    harvestMushrooms(); STATE.waveStartAt = performance.now();
     if (STATE.hostages.active) return; 
     
     STATE.currentTarget = null; STATE.isSpawning = false;
@@ -628,7 +634,7 @@ function spawnWave() {
         
         // TOURNAMENT PACING: Tighter board, less visual clutter
         // Starts at 1 word, adds 1 word every 4 waves. Base maximum of 3 words.
-        let baseWords = Math.min(3, 1 + Math.floor((STATE.wave - 1) / 4)); 
+        let baseWords = Math.min(STATE.wave >= curveOf(CURVE.fourthWord) ? 4 : 3, 1 + Math.floor((STATE.wave - 1) / 4)); 
         
         // Only give elite typists a maximum of 1 extra word to prevent screen flooding
         let wpmBonus = (STATE.currentWPM >= 90 && !STATE.daily) ? 1 : 0; 
@@ -638,12 +644,13 @@ function spawnWave() {
         
         STATE.taFadeOutTime = performance.now() + DATA.DIFFICULTY[STATE.difficulty || 'contender'].hold + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
-            if (w === 0) STATE.waveFirsts = new Set();
+            if (w === 0) { STATE.waveFirsts = new Set(); STATE.waveLetters = 0; }
             STATE.slot = w;
             let word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             for (let tries = 0; tries < 12 && STATE.waveFirsts.has(word[0]); tries++) word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             STATE.waveFirsts.add(word[0]);
             let wordId = "W" + Date.now() + w;
+            STATE.waveLetters += word.length;
             const letters = [];
             for (let i = 0; i < word.length; i++) { const e = new SwarmEnemy(word, i, word.length, wordId); enemies.push(e); letters.push(e); }
             if (STATE.snakeWave) startSnake(letters, w);
@@ -796,13 +803,15 @@ function gameLoop(time) {
         if(!alive) { STATE.currentTarget = null; } 
     }
 
-    if (enemies.every(e => e.state === 'ufo') && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
-        STATE.currentTarget = null; 
+    const cleared = enemies.every(e => e.state === 'ufo');
+    const timedOut = !cleared && waveClockApplies() && performance.now() - (STATE.waveStartAt || 0) > waveAllowedMs() && enemies.filter(e => !e.isBoss && e.state !== 'ufo').length < CURVE.letterCap;
+    if ((cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
+        if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVER LETTERS ATTACK', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.state = 'dive'; }); }
         
-        if (STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
+        if (cleared && STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty].scoreMod;
             let bonus = Math.floor(1000 * STATE.wave * diffScoreMod * (STATE.challenge ? 2 : 1));
-            STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + 5);
+            STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healPerfect));
             createPopText(`PERFECT WAVE! +${bonus}`, canvas.width/2, canvas.height/2 - 50, '#00f3ff');
         }
         STATE.waveTotal = 0; STATE.waveCorrect = 0;
@@ -815,7 +824,7 @@ function gameLoop(time) {
             createPopText(`SECTOR ${STATE.sector - 1} CLEARED!`, canvas.width/2, canvas.height/2, '#00ff66');
             createPopText("HYPERSPACE JUMP INITIATED...", canvas.width/2, canvas.height/2 + 50*STATE.sf, '#00f3ff');
             
-            STATE.hull = Math.min(100, STATE.hull + 20); updateUI();
+            STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healSector)); updateUI();
 
             const rid = STATE.runId;
             setTimeout(() => {
@@ -1084,7 +1093,7 @@ function pauseGame() {
 function resumeGame() {
     if (!STATE.paused) return;
     const ms = performance.now() - STATE.pausedAt;
-    STATE.startTime += ms; STATE.taFadeOutTime += ms;
+    STATE.startTime += ms; STATE.taFadeOutTime += ms; STATE.waveStartAt += ms;
     lastKeyPress = performance.now(); lastGoodChar = null;
     STATE.paused = false; STATE.lastFrame = performance.now();
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'none';
