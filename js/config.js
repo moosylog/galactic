@@ -308,7 +308,8 @@ const CURVE = {
     // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.
     // The time allowed is reqBaseMs plus the time a typist at the required speed needs for the wave's letters.
     // Required speed per division = [start, WPM added per wave], capped at reqCap.
-    reqWpm: { academy: [12, 3.2], contender: [60, 4.0], apex: [70, 4.5] }, reqCap: 700, reqBaseMs: 1500, letterCap: 40,
+    reqWpm: { academy: [8, 1.4], contender: [28, 2.0], apex: [40, 3.5] }, reqCap: 700, reqBaseMs: 1500, reqBaseDecay: 8, reqBaseFloor: 500, reqWordMs: 700, reqWordDecay: 6, reqWordFloor: 150,
+    maxWords: { academy: 3, contender: 4, apex: 5 },       // never more words than this on screen at once
     speedPerWave: { academy: 0.10, contender: 0.06, apex: 0.045 }, speedCap: 5,    // letters get faster every wave
     diveGrowth: { academy: 0.0012, contender: 0.001, apex: 0.0012 },                  // how eager letters are to dive (per wave)
     graceDecay: 0.01, graceMin: 0.4,               // hover time before a dive shrinks by this share of its base per wave (floor)
@@ -321,7 +322,13 @@ const CURVE = {
     comboCap: 50                                   // the combo bonus per letter stops growing at this combo
 };
 function reqWpm(wave) { const [a, b] = curveOf(CURVE.reqWpm); return Math.min(CURVE.reqCap, a + b * (wave || 1)); }
-function waveAllowedMs() { return CURVE.reqBaseMs + (STATE.waveLetters || 0) * 12000 / reqWpm(STATE.wave); }
+// The fixed parts (getting started, finding each word) shrink as waves pass, so even the fastest typist is eventually outpaced.
+function waveAllowedMs() {
+    const w = STATE.wave || 1;
+    return Math.max(CURVE.reqBaseFloor, CURVE.reqBaseMs - CURVE.reqBaseDecay * w)
+        + (STATE.waveWords || 0) * Math.max(CURVE.reqWordFloor, CURVE.reqWordMs - CURVE.reqWordDecay * w)
+        + (STATE.waveLetters || 0) * 12000 / reqWpm(w);
+}
 // Waves 1 and 2, boss waves, challenge stages and the wave before a boss must be cleared; every other wave runs on the clock.
 function waveClockApplies() { const w = STATE.wave || 1; return w >= 3 && w % 5 !== 0 && (w + 1) % 5 !== 0 && !STATE.challenge; }
 function waveClockFraction() {
@@ -332,3 +339,12 @@ function graceMs(diff) { return diff.grace * Math.max(CURVE.graceMin, 1 - (STATE
 function missDamage(diff) { return diff.missDmg + Math.floor((STATE.wave || 1) * CURVE.dmgPerWave); }
 function curveOf(table) { return table[STATE.difficulty || 'contender']; }
 function diffMod() { return DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod; }
+
+// how many different words are on screen right now, and which formation row each new word may use
+function aliveWordCount() { return new Set(enemies.filter(e => !e.isBoss && e.state !== 'ufo' && e.active).map(e => e.wordId)).size; }
+function freeRow() {
+    const rowY = r => (STATE.challenge ? 90 + r * 55 : 110 + r * 70) * STATE.sf;
+    const busy = r => enemies.some(e => !e.isBoss && e.active && (e.state === 'hover' || e.state === 'enter') && e.formY !== undefined && Math.abs(e.formY - rowY(r)) < 45 * STATE.sf);
+    for (let r = 0; r < 6; r++) if (!busy(r)) return r;
+    return aliveWordCount() % 6;
+}

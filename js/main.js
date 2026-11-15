@@ -407,6 +407,7 @@ function drawShipHUD(time) {
         const bw = Math.min(canvas.width * 0.5, 360 * STATE.sf), bx = canvas.width - 12 * STATE.sf - bw, by = splitLine - 64 * STATE.sf;
         ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bx, by, bw, 4 * STATE.sf);
         ctx.fillStyle = clock > 0.35 ? '#00f3ff' : '#ff0055'; ctx.fillRect(bx, by, bw * clock, 4 * STATE.sf);
+        if (clock < 0.25) { ctx.fillStyle = '#ff0055'; ctx.textAlign = 'right'; ctx.fillText('NEXT WAVE ARRIVING', canvas.width - 12 * STATE.sf, by - 6 * STATE.sf); }
     }
     if (STATE.waveModId) { ctx.fillStyle = WAVE_MODS[STATE.waveModId].color; ctx.fillText('NOW: ' + WAVE_MODS[STATE.waveModId].name, canvas.width - 12 * STATE.sf, splitLine - 48 * STATE.sf); }
     ctx.restore();
@@ -661,12 +662,14 @@ function spawnWave() {
         let wpmBonus = (STATE.currentWPM >= 90 && !STATE.daily) ? 1 : 0; 
         
         // Absolute hard cap of 4 words on screen at once
-        let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = Math.min(4, 2 + Math.floor(STATE.wave / 5)); 
+        let numWords = Math.min(4, baseWords + wpmBonus); if (STATE.challenge) numWords = Math.min(4, 2 + Math.floor(STATE.wave / 5));
+        numWords = Math.max(1, Math.min(numWords, curveOf(CURVE.maxWords) - aliveWordCount()));   // leftovers count towards the limit
+        STATE.waveWords = numWords; 
         
         STATE.taFadeOutTime = performance.now() + DATA.DIFFICULTY[STATE.difficulty || 'contender'].hold + (numWords * 500);     
         for(let w=0; w<numWords; w++) {
-            if (w === 0) { STATE.waveFirsts = new Set(); STATE.waveLetters = 0; }
-            STATE.slot = w;
+            if (w === 0) { STATE.waveFirsts = headLetters(); STATE.waveLetters = 0; }
+            STATE.slot = freeRow();
             let word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             for (let tries = 0; tries < 12 && STATE.waveFirsts.has(word[0]); tries++) word = getWordForWave(STATE.wave, false, STATE.focusBigram);
             STATE.waveFirsts.add(word[0]);
@@ -825,9 +828,9 @@ function gameLoop(time) {
     }
 
     const cleared = enemies.every(e => e.state === 'ufo');
-    const timedOut = !cleared && waveClockApplies() && performance.now() - (STATE.waveStartAt || 0) > waveAllowedMs() && enemies.filter(e => !e.isBoss && e.state !== 'ufo').length < CURVE.letterCap;
+    const timedOut = !cleared && waveClockApplies() && performance.now() - (STATE.waveStartAt || 0) > waveAllowedMs() && aliveWordCount() < curveOf(CURVE.maxWords);
     if ((cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
-        if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVER LETTERS ATTACK', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.state = 'dive'; }); }
+        if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVERS WILL DIVE', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.diveFuse = performance.now() + 1500; }); }
         
         if (cleared && STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty].scoreMod;
@@ -1158,6 +1161,11 @@ function wordHeads() {
     const h = {};
     enemies.forEach(en => { if (!en.isBoss && en.active && !en.targeted && (h[en.wordId] === undefined || en.index < h[en.wordId])) h[en.wordId] = en.index; });
     return h;
+}
+// first letters of the words that are on screen right now: new words must not start with the same letter
+function headLetters() {
+    const h = wordHeads();
+    return new Set(enemies.filter(e => !e.isBoss && e.active && !e.targeted && e.index === h[e.wordId]).map(e => e.char));
 }
 function byId(id) { return document.getElementById(id); }
 function prefs() { try { return JSON.parse(localStorage.getItem('galactic_prefs')) || {}; } catch (e) { return {}; } }

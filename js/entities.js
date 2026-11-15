@@ -444,6 +444,7 @@ class SwarmEnemy {
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
             this.hoverT = (this.hoverT || 0) + dt;
+            if (this.diveFuse && time > this.diveFuse) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && (e.state === 'hover' || e.state === 'enter')) e.state = 'dive'; }); }
             let diveChance = 0.0005 + (STATE.wave * curveOf(CURVE.diveGrowth));
             if (enemies.length <= 8) diveChance += diff.rush;
             if (this.hoverT > graceMs(diff) && Math.random() < diveChance / this.word.length) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && e.state === 'hover') e.state = 'dive'; }); }
