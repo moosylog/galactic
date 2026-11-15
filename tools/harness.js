@@ -14,9 +14,10 @@ function makeEnv(diff, store = {}) {
       set: (t, k, v) => { props[k] = v; return true; }, apply: () => mk(), construct: () => mk()
     });
   };
+  const gameCtx = mk({ measureText: s => ({ width: String(s).length * 20 }) });
   const els = {};
   const byId = id => els[id] || (els[id] = mk(
-    id === 'game-canvas' || id === 'bg-canvas' ? { width: 1280, height: 800 } :
+    id === 'game-canvas' ? { width: 1280, height: 800, getContext: () => gameCtx } : id === 'bg-canvas' ? { width: 1280, height: 800 } :
     id === 'hwSelect' ? { value: 'go60' } : id === 'layoutSelect' ? { value: 'qwerty' } :
     id === 'diffSelect' ? { value: diff } : id === 'chk-textassistant' ? { checked: true } : {}));
   const FakeDate = class extends Date { static now() { return clock; } };
@@ -48,7 +49,7 @@ function makeEnv(diff, store = {}) {
       if (n) expected = n.char;
     }
     if (!expected) {
-      let starts = enemies.filter(e => !e.isBoss && e.index === 0 && e.active && !e.targeted && e.x > 0 && e.x < W && e.y > 0);
+      const heads = wordHeads(); let starts = enemies.filter(e => !e.isBoss && e.index === heads[e.wordId] && e.char && e.active && !e.targeted && e.x > 0 && e.x < W && e.y > 0);
       const plain = starts.filter(e => e.state !== 'ufo'); if (plain.length) starts = plain;
       starts.sort((a, b) => b.y - a.y);
       if (starts[0]) { expected = starts[0].char; think = 350; }
