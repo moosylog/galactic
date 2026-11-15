@@ -79,23 +79,23 @@ const Music = {
     }
 };
 
-// Start-screen tune: an original upbeat C-major loop (8 bars, about 15 s) with a vibrato pulse lead, a bouncing bass and a light beat.
-// The arpeggio joins for the second half of the loop. It follows the same Music setting as the in-game music.
+// Start-screen tune: an original arcade-style loop in A minor (8 bars, about 13 s): urgent and sparse, with a fast pulsing arpeggio,
+// blunt square-wave stabs for the lead, a driving bass, a hard beat and falling siren dives. It follows the same Music setting as the in-game music.
 const MenuMusic = {
-    running: false, paused: false, step: 0, nextTime: 0, tempo: 124, timer: null, master: null,
+    running: false, paused: false, step: 0, nextTime: 0, tempo: 148, timer: null, master: null,
     // one entry per bar: the lead melody (one token per eighth note: a note name, '-' for a rest, '=' to hold the last note), bass root and fifth, chord tones for the arpeggio
     BARS: [
-        { lead: 'C5 E5 G5 E5 G5 A5 G5 E5',   root: 'C3', fifth: 'G3', tri: ['C4', 'E4', 'G4'] },
-        { lead: 'A4 C5 E5 C5 E5 D5 C5 -',    root: 'A2', fifth: 'E3', tri: ['A3', 'C4', 'E4'] },
-        { lead: 'F5 A5 G5 F5 E5 F5 D5 -',    root: 'F2', fifth: 'C3', tri: ['F3', 'A3', 'C4'] },
-        { lead: 'D5 G5 F5 D5 B4 D5 G4 -',    root: 'G2', fifth: 'D3', tri: ['G3', 'B3', 'D4'] },
-        { lead: 'E5 G5 C6 = G5 E5 A5 G5',    root: 'C3', fifth: 'G3', tri: ['C4', 'E4', 'G4'] },
-        { lead: 'B4 E5 G5 E5 B5 = A5 G5',    root: 'E2', fifth: 'B2', tri: ['E3', 'G3', 'B3'] },
-        { lead: 'A5 G5 F5 A5 C6 = A5 F5',    root: 'F2', fifth: 'C3', tri: ['F3', 'A3', 'C4'] },
-        { lead: 'D5 F5 G5 B5 A5 G5 D5 -',    root: 'G2', fifth: 'D3', tri: ['G3', 'B3', 'D4'] }
+        { lead: 'A5 - A5 - A5 C6 B5 A5',     root: 'A2', fifth: 'E3', tri: ['A3', 'C4', 'E4'] },
+        { lead: 'E6 - E6 - E6 D6 C6 B5',     root: 'A2', fifth: 'E3', tri: ['A3', 'C4', 'E4'] },
+        { lead: 'F5 - F5 - F5 A5 G5 F5',     root: 'F2', fifth: 'C3', tri: ['F3', 'A3', 'C4'] },
+        { lead: 'G5 - B5 - D6 = B5 G5',      root: 'G2', fifth: 'D3', tri: ['G3', 'B3', 'D4'] },
+        { lead: 'A5 C6 E6 A6 = E6 C6 A5',    root: 'A2', fifth: 'E3', tri: ['A3', 'C4', 'E4'] },
+        { lead: 'B5 D6 E6 B5 C6 = A5 -',     root: 'A2', fifth: 'E3', tri: ['A3', 'C4', 'E4'] },
+        { lead: 'D6 - D6 - F6 E6 D6 A5',     root: 'D3', fifth: 'A3', tri: ['D4', 'F4', 'A4'] },
+        { lead: 'E6 D6 B5 G#5 E5 - E5 -',    root: 'E2', fifth: 'B2', tri: ['E3', 'G#3', 'B3'] }
     ],
     SEMI: { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 },
-    ARPPAT: [0, 1, 2, 1, 0, 1, 2, 1, 2, 1, 0, 1, 2, 1, 0, 2],
+    ARPPAT: [0, 1, 2, 3, 2, 1, 2, 3, 0, 1, 2, 3, 2, 1, 2, 3],   // 0-2 = chord tones, 3 = the root an octave up
     freq(name) {   // 'C5' -> Hz (A4 = 440)
         const m = /^([A-G])(#|b)?(\d)$/.exec(name); if (!m) return 0;
         const semi = (+m[3]) * 12 + this.SEMI[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
@@ -127,22 +127,24 @@ const MenuMusic = {
     },
     playStep(s, t) {
         const bar = Math.floor(s / 16), i = s % 16, b = this.BARS[bar], eighth = i >> 1, dur = 60 / this.tempo / 2;
-        // beat: kick on 1 and 3 (plus a pickup on odd bars), snare on 2 and 4, hats between, a snare roll to close the loop
-        if (i === 0 || i === 8 || (i === 11 && bar % 2 === 1)) this.kick(t);
+        // beat: hard kick on 1 and 3 (plus a pickup on odd bars), snare on 2 and 4, hats on the eighths, a snare roll to close the loop
+        if (i === 0 || i === 8 || (i === 14 && bar % 2 === 1)) this.kick(t);
         if (i === 4 || i === 12) this.snare(t, 1);
         if (bar === 7 && i >= 14) this.snare(t, 0.6);
         if (i % 4 === 2) this.hat(t, 0.5); else if (i % 2 === 0 && i % 4 !== 0) this.hat(t, 0.2);
+        // falling siren dives, like attackers swooping down: end of bars 4 and 8
+        if ((bar === 3 || bar === 7) && i === 12) this.dive(t);
         // bass: root, octave, fifth, octave on the eighths
         if (i % 2 === 0) {
             const f = [b.root, 'oct', b.fifth, 'oct', b.root, 'oct', b.fifth, 'oct'][eighth];
-            this.voice(f === 'oct' ? this.freq(b.root) * 2 : this.freq(f), t, dur * 0.9, 'triangle', 0.55, 0);
+            this.voice(f === 'oct' ? this.freq(b.root) * 2 : this.freq(f), t, dur * 0.85, 'triangle', 0.6, 0);
         }
-        // arpeggio: second half of the loop only
-        if (bar >= 4) this.voice(this.freq(b.tri[this.ARPPAT[i] % 3]) * 2, t, 0.09, 'square', 0.1, 0);
-        // lead: a held token ('=') just lengthens the note before it
+        // the pulsing arpeggio runs all the way through, sixteenth notes
+        const ai = this.ARPPAT[i]; this.voice(ai === 3 ? this.freq(b.tri[0]) * 2 : this.freq(b.tri[ai]), t, 0.07, 'square', 0.085, 0);
+        // lead: blunt, short stabs; a held token ('=') just lengthens the note before it
         if (i % 2 === 0) {
             const toks = b.lead.split(' '), tok = toks[eighth];
-            if (tok !== '-' && tok !== '=') { let len = 1; while (toks[eighth + len] === '=') len++; this.voice(this.freq(tok), t, dur * len * 0.92, 'square', 0.3, 14); }
+            if (tok !== '-' && tok !== '=') { let len = 1; while (toks[eighth + len] === '=') len++; this.voice(this.freq(tok), t, dur * (len > 1 ? len * 0.9 : 0.65), 'square', 0.28, 0); }
         }
     },
     voice(f, t, d, type, v, vib) {   // one note; vib = vibrato depth in cents (fades in after the attack)
@@ -156,6 +158,12 @@ const MenuMusic = {
             l.connect(lg); lg.connect(o.detune); l.start(t); l.stop(t + d + 0.02);
         }
         o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + 0.02);
+    },
+    dive(t) {   // a falling siren sweep
+        const o = actx.createOscillator(), g = actx.createGain(); o.type = 'square';
+        o.frequency.setValueAtTime(1700, t); o.frequency.exponentialRampToValueAtTime(240, t + 0.42);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.44);
+        o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.46);
     },
     kick(t) {
         const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine';
