@@ -123,8 +123,10 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Boss waves** (every 5th wave). One long word, up to 8 letters. Type it cleanly to win.
 - **A wrong key** lets the boss **capture the two keys** involved (the previous and the current letter). They vanish from your keyboard.
+- The boss word is usually built around **one of your weak pairs** (not in daily runs). It is the pair you most need to practise, and a slip on it is what gets keys captured.
 - To rescue them you type **5 practice words** built around that pair. A typo resets the word (small health cost). A word that falls past the line costs health and is replaced by a new one. **EMP is disabled during a rescue.**
 - **An idle boss strikes** for 10 health if you stop typing for a while. "BOSS CHARGING" warns you at 70% of the timer.
+- **Rescued keys get dual fire.** Keys you free by typing the 5 rescue words fire two lasers (shown in yellow) and score **10% more** per letter for the rest of the run. Beating the boss before the rescue frees the keys without this bonus. The bonus is small on purpose, so it is never worth getting captured.
 - Beating a boss moves you to the next sector and restores some health.
 
 **EMP.** Fill the bar, then press **Enter**. It clears every letter on screen (50 points each) and deals 2 damage to a boss. It cannot be used during a rescue.
