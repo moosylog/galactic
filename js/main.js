@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], dualChars: {}, snakeWave: false, focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -375,7 +375,7 @@ function buildHUD() {
         let px = offsetX + (k.x * u) + (u/2); let py = offsetY + (k.y * u) + (u/2);
 
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
-            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: false, isAbducted: false };
+            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
             tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
@@ -617,6 +617,14 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
         if (f.length) pool = f;
+    } else if (isBoss && !STATE.daily && Math.random() < 0.7) {
+        // a boss is usually built around ONE of your weak pairs (not all of them: a slip captures those two keys)
+        const wb = weakBigrams();
+        if (wb.length) {
+            const pick = wb[Math.floor(Math.random() * Math.min(3, wb.length))];
+            const hit = pool.filter(w => !usedWords.has(w) && w.includes(pick));
+            if (hit.length) pool = hit;
+        }
     } else if (!isBoss && !STATE.daily && Math.random() < 0.35) {
         const wb = weakBigrams();
         const hit = pool.filter(w => !usedWords.has(w) && wb.some(b => w.includes(b)));
@@ -911,7 +919,7 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
+    STATE.dualChars = {}; initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
     STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); Music.start();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
