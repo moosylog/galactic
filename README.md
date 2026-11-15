@@ -48,7 +48,7 @@ The start screen is split into four small screens, so nothing needs scrolling.
 
 **Insert coin.** The blinking *INSERT COIN* line is flavour only. Pressing **Enter** (or PLAY) drops a coin with a short sound and starts the game a moment later. There is nothing to earn or spend, and no extra step. The same Enter key starts a new game from the end screen.
 
-**Menu music.** A short, upbeat tune plays on the start screens once the browser allows sound (after your first key press or click). It stops the moment you press Enter or PLAY. It follows the Music setting under Setup, Display.
+**Menu music.** A short, upbeat tune starts as soon as the game loads if your browser allows sound. Most browsers block sound until you press a key or click, so a small *PRESS ANY KEY OR CLICK FOR SOUND* hint shows and the tune starts on your first key or click. It stops the moment you press Enter or PLAY. It follows the Music setting under Setup, Display.
 
 **Menu animation.** Stars, falling letters and a little ship play behind the menu. You can switch this off under Setup, Display. It is also off automatically if your system asks for reduced motion.
 
