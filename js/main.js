@@ -398,7 +398,7 @@ function drawShipHUD(time) {
     const guide = new Set();
     if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) { const bc = STATE.bossRef.word[STATE.bossRef.typedIndex]; if (bc) guide.add(bc.toLowerCase()); }
     else if (STATE.currentTarget) { const gn = enemies.find(e => e.wordId === STATE.currentTarget.wordId && e.index === STATE.currentTarget.index && e.active && !e.targeted); if (gn) guide.add(gn.char); }
-    else enemies.forEach(e => { if (!e.isBoss && e.index === 0 && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); });
+    else { const heads = wordHeads(); enemies.forEach(e => { if (!e.isBoss && e.index === heads[e.wordId] && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); }); }
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
     ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
     ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
@@ -480,31 +480,51 @@ function drawShipHUD(time) {
             const rootOf = id => id.replace(/(s\d+)+$/, '');
             const locked = !!(STATE.currentTarget && wordsMap[STATE.currentTarget.wordId]);
             const anchorY = canvas.height - maxHudHeight - (70 * STATE.sf);
-            // Fixed layout: each word keeps its place for the whole wave, even after its neighbours are gone or a snake splits.
+            // Each word keeps its place for as long as it is on screen. Words that arrive while others are still there
+            // go into free space (or a second line above) and never push existing words around.
             const roots = []; wordList.forEach(w => { const r = rootOf(w.id); if (roots.indexOf(r) < 0) roots.push(r); });
-            if (!STATE.hLayout || roots.some(r => !STATE.hLayout.rows[r])) {
+            let lay = STATE.hLayout;
+            if (!lay || roots.every(r => !lay.rows[r])) {
                 const fulls = roots.map(r => wordList.filter(w => rootOf(w.id) === r).sort((a, b) => a.off - b.off)[0].word.toUpperCase());
                 let fs = Math.floor(40 * STATE.sf), gp = 44 * STATE.sf;
                 const total = () => { ctx.font = `800 ${fs}px 'Oxanium'`; return fulls.reduce((a, f) => a + ctx.measureText(f).width, 0) + gp * (fulls.length - 1); };
                 while (fs > 14 && total() > canvas.width * 0.94) { fs -= 2; gp *= 0.95; }
                 let lx = canvas.width / 2 - total() / 2; const rows = {};
-                roots.forEach((r, i) => { rows[r] = { x: lx, full: fulls[i] }; lx += ctx.measureText(fulls[i]).width + gp; });
-                STATE.hLayout = { fs, rows };
+                roots.forEach((r, i) => { const w = ctx.measureText(fulls[i]).width; rows[r] = { x: lx, line: 0, w, full: fulls[i] }; lx += w + gp; });
+                lay = STATE.hLayout = { fs, gp, rows };
+            } else {
+                Object.keys(lay.rows).forEach(r => { if (roots.indexOf(r) < 0) delete lay.rows[r]; });
+                ctx.font = `800 ${lay.fs}px 'Oxanium'`;
+                roots.forEach(r => {
+                    if (lay.rows[r]) return;
+                    const full = wordList.filter(w => rootOf(w.id) === r).sort((a, b) => a.off - b.off)[0].word.toUpperCase();
+                    const w = ctx.measureText(full).width, lo = canvas.width * 0.03, hi = canvas.width * 0.97;
+                    let spot = null;
+                    for (let line = 0; line < 4 && !spot; line++) {
+                        const used = Object.values(lay.rows).filter(R => R.line === line).map(R => [R.x, R.x + R.w]).sort((a, b) => a[0] - b[0]);
+                        let x = lo;
+                        for (const [a, b] of used) { if (a - lay.gp - x >= w) break; x = Math.max(x, b + lay.gp); }
+                        if (x + w <= hi) spot = { x, line };
+                    }
+                    lay.rows[r] = { x: spot ? spot.x : lo, line: spot ? spot.line : 3, w, full };
+                });
             }
-            const lay = STATE.hLayout; ctx.font = `800 ${lay.fs}px 'Oxanium'`;
+            ctx.font = `800 ${lay.fs}px 'Oxanium'`;
             wordList.forEach(w => {
                 const L = lay.rows[rootOf(w.id)]; if (!L) return;
+                const y = anchorY - L.line * lay.fs * 1.35;
                 const mine = locked && w.id === STATE.currentTarget.wordId, gold = rootOf(w.id) === STATE.goldenId;
                 const px = k => L.x + ctx.measureText(L.full.slice(0, w.off + k)).width;
-                if (mine) { ctx.save(); ctx.strokeStyle = '#00ff66'; ctx.shadowColor = '#00ff66'; ctx.shadowBlur = 14 * STATE.sf; ctx.lineWidth = 2 * STATE.sf; ctx.beginPath(); ctx.roundRect(px(0) - 8 * STATE.sf, anchorY - lay.fs * 0.7, px(w.word.length) - px(0) + 16 * STATE.sf, lay.fs * 1.4, 8 * STATE.sf); ctx.stroke(); ctx.restore(); }
+                if (mine) { ctx.save(); ctx.strokeStyle = '#00ff66'; ctx.shadowColor = '#00ff66'; ctx.shadowBlur = 14 * STATE.sf; ctx.lineWidth = 2 * STATE.sf; ctx.beginPath(); ctx.roundRect(px(0) - 8 * STATE.sf, y - lay.fs * 0.7, px(w.word.length) - px(0) + 16 * STATE.sf, lay.fs * 1.4, 8 * STATE.sf); ctx.stroke(); ctx.restore(); }
                 for (let q = 0; q < w.word.length; q++) {
                     const ch = w.word[q].toUpperCase(), cw = ctx.measureText(ch).width;
                     ctx.shadowBlur = 0;
                     if (mine && q < w.typed) ctx.fillStyle = 'rgba(0,255,102,0.35)';
                     else if (mine && q === w.typed) { ctx.fillStyle = '#00ff66'; ctx.shadowBlur = 18 * STATE.sf; ctx.shadowColor = '#00ff66'; }
-                    else if (!locked && q === 0 && w.off === 0) ctx.fillStyle = gold ? '#ffd700' : '#00ff66';
+                    else if (!locked && q < w.index) ctx.fillStyle = 'rgba(255,255,255,0.22)';
+                    else if (!locked && q === w.index) ctx.fillStyle = gold ? '#ffd700' : '#00ff66';
                     else ctx.fillStyle = gold ? '#ffd700' : (locked && !mine ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.92)');
-                    ctx.fillText(ch, px(q) + cw / 2, anchorY);
+                    ctx.fillText(ch, px(q) + cw / 2, y);
                 }
                 ctx.shadowBlur = 0;
             });
@@ -954,7 +974,12 @@ document.addEventListener('keydown', (e) => {
     STATE.totalKeystrokes++;
     STATE.waveTotal++;
 
-    if (STATE.currentTarget && !enemies.some(en => en.wordId === STATE.currentTarget.wordId && en.index === STATE.currentTarget.index && en.active && !en.targeted)) STATE.currentTarget = null;
+    if (STATE.currentTarget) {
+        // letters of your word that already fell are skipped; the rest of the word stays typeable
+        const ct = STATE.currentTarget;
+        const nx = enemies.filter(en => en.wordId === ct.wordId && en.index >= ct.index && en.active && !en.targeted).sort((a, b) => a.index - b.index)[0];
+        if (nx) ct.index = nx.index; else STATE.currentTarget = null;
+    }
     let targetEnemy = null; let seqMatched = false; let startsWord = false;
     let hitDrone = bonusDrones.find(b => b.char === inputChar && b.active && !b.targeted);
     
@@ -971,10 +996,11 @@ document.addEventListener('keydown', (e) => {
     }
     
     if(!targetEnemy && !STATE.currentTarget && (!STATE.bossRef || STATE.bossRef.state === 'shielded')) {
-        let matching = enemies.filter(en => !en.isBoss && en.index === 0 && en.char === inputChar && en.active && !en.targeted);
+        const heads = wordHeads();
+        let matching = enemies.filter(en => !en.isBoss && en.char === inputChar && en.active && !en.targeted && en.index === heads[en.wordId]);
         if(matching.length > 0) {
             matching.sort((a,b) => b.y - a.y);
-            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index, t0: now, full: targetEnemy.index === 0, dirty: false }; startsWord = (targetEnemy.index === 0);
+            targetEnemy = matching[0]; STATE.currentTarget = { wordId: targetEnemy.wordId, index: targetEnemy.index, t0: now, full: targetEnemy.index === 0, dirty: false }; startsWord = true;
         }
     }
 
@@ -1127,6 +1153,12 @@ function setKbSize(v) { if (!HUD_FRACS[v]) return; STATE.kbSize = v; try { local
 const DIV_NAMES = { academy: 'ACADEMY', contender: 'CONTENDER', apex: 'APEX' };
 const HW_NAMES = { go60: 'Go60', glove80: 'Glove80', corne: 'Corne', voyager: 'Voyager', ansi60: 'ANSI 60%' };
 const LAYOUT_NAMES = { qwerty: 'QWERTY', colemak_dh: 'Colemak-DH', dvorak: 'Dvorak', custom: 'Custom layout' };
+// The first letter still standing of every word. A word whose first letters already fell can still be started from there.
+function wordHeads() {
+    const h = {};
+    enemies.forEach(en => { if (!en.isBoss && en.active && !en.targeted && (h[en.wordId] === undefined || en.index < h[en.wordId])) h[en.wordId] = en.index; });
+    return h;
+}
 function byId(id) { return document.getElementById(id); }
 function prefs() { try { return JSON.parse(localStorage.getItem('galactic_prefs')) || {}; } catch (e) { return {}; } }
 function savePrefs(p) { try { localStorage.setItem('galactic_prefs', JSON.stringify(Object.assign(prefs(), p))); } catch (e) {} }
