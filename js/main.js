@@ -913,7 +913,7 @@ function gameLoop(time) {
 function startGame() {
     initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
-    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); MenuMusic.stop(); menuMusicArmed = false; Music.start();
+    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); Music.start();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
@@ -1235,7 +1235,7 @@ function coinSound() {
 }
 function insertCoin() {
     if (STATE.active || coinPending) return;
-    coinPending = true; MenuMusic.stop(); menuMusicArmed = false; coinSound();
+    coinPending = true; MenuMusic.stop(); menuMusicArmed = false; soundHint(false); coinSound();
     const c = byId('coin-line'); if (c) c.textContent = 'CREDIT 01';
     setTimeout(() => { coinPending = false; if (c) c.innerHTML = 'INSERT COIN <small>PRESS ENTER</small>'; if (!STATE.active) startGame(); }, 380);
 }
@@ -1280,23 +1280,30 @@ function importProgress(ev) {
 // attract-mode background: drifting stars, falling letters and a little ship that shoots them
 let menuFxRunning = false, menuFxOn = true;
 // start-screen tune: plays as soon as the browser allows audio (the first key or click), stops when a game starts
-let menuMusicArmed = false;
+let menuMusicArmed = false, menuMusicProbe = false;
+function soundHint(on) { const h = byId('sound-hint'); if (h) h.style.display = on ? 'block' : 'none'; }
+function menuMusicShown() { return !!UI.menu && UI.menu.style.display !== 'none'; }
 function menuMusicWant() {
     if (!Music.on || STATE.active) return;
-    if (actx && actx.state === 'running') { MenuMusic.start(); return; }
-    menuMusicArmed = true;   // the browser blocks audio until the first key or click: the listeners in initMenu pick it up
+    if (!actx) { try { initAudio(); } catch (e) {} }   // try at load: allowed in some browsers (for example a site you visit often)
+    if (actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); return; }
+    menuMusicArmed = true; soundHint(true);   // blocked: wait for the first key or click (listeners in initMenu)
+    if (!menuMusicProbe) {   // some browsers switch the audio on a moment after load
+        menuMusicProbe = true;
+        setTimeout(() => { menuMusicProbe = false; if (menuMusicArmed && !STATE.active && Music.on && menuMusicShown() && actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); } }, 300);
+    }
 }
 function menuMusicGesture(e) {
     if (!menuMusicArmed || STATE.active || !Music.on) return;
     if (e.type === 'keydown' && (e.key === 'Enter' || e.key === 'Escape')) return;   // Enter starts the game, so no tune for that press
-    if (!UI.menu || UI.menu.style.display === 'none') return;
-    menuMusicArmed = false; MenuMusic.start();
+    if (!menuMusicShown()) return;
+    menuMusicArmed = false; soundHint(false); MenuMusic.start();
 }
 function setMusic(on) {
     Music.on = !!on; savePrefs({ music: !!on });
-    if (!on) { Music.stop(); MenuMusic.stop(); menuMusicArmed = false; }
+    if (!on) { Music.stop(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); }
     else if (STATE.active) { if (!STATE.paused) Music.start(); }
-    else MenuMusic.start();   // the checkbox click counts as the gesture the browser wants
+    else { menuMusicArmed = false; soundHint(false); MenuMusic.start(); }   // the checkbox click counts as the gesture the browser wants
 }
 function setMenuFx(on) { menuFxOn = !!on; savePrefs({ menuFx: !!on }); if (on) startMenuFx(); }
 function startMenuFx() {
