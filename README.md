@@ -56,7 +56,7 @@ The start screen is split into four small screens, so nothing needs scrolling.
 
 1. **Words arrive as letters.** Each word flies in as a group of letters and settles into a row near the top. Every word in a wave starts with a different letter.
 2. **Choose a word** by typing its first letter. The word helper, one fixed row just above the keyboard line, shows every word in the same order all the time, with first letters in green.
-3. **Finish it in order.** Once you have started a word you are *locked on*: only its next letter counts. The locked word is shown large with your progress.
+3. **Finish it in order.** Once you have started a word you are *locked on*: only its next letter counts. If letters of your word fall past the line, you simply carry on from the next letter still on screen. The locked word is shown large with your progress.
 4. **A wrong key is a mistake**, not a switch. It breaks your combo and lowers your accuracy, but you keep your word and can carry on.
 5. **Letters that reach the danger line cost you health.** After a short grace period the letters of a word dive together, swooping toward the line above the keyboard. Finish the word before they land.
 6. **Clear all words** to start the next wave. Every 5th wave is a boss.
@@ -72,7 +72,7 @@ You can only start a word from its first letter, and you cannot jump between wor
 | **Status bar** | Score, wave/sector, combo, words per minute, accuracy, **HEALTH** and the **EMP** charge bar. |
 | **HEALTH** | Starts at 100%. Shown as ship icons (one per 20%) plus the percentage. Reaching 0 ends the run. |
 | **EMP bar** | Fills as you hit letters and earn bonuses. When full it glows and **Enter** detonates it (see [Waves, bosses and bonuses](#waves-bosses-and-bonuses)). |
-| **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Each word also keeps its spot after its neighbours are finished, and when a snake splits. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
+| **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Each word also keeps its spot after its neighbours are finished, and when a snake splits. Words that arrive while others are still on screen go into free space, or a second line above, so nothing jumps. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
 | **Danger line** | The horizontal line above the keyboard. A letter that crosses it costs health. |
 | **Keyboard panel** | Your real layout. See below. |
 | **Pop-up messages** | Short notices such as WAVE, FOCUS, CLEAN, BLAZING, COMBO, BOSS CHARGING, SHIELD READY. |
