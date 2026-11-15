@@ -52,7 +52,7 @@ function makeEnv(diff, store = {}) {
       const heads = wordHeads(); let starts = enemies.filter(e => !e.isBoss && e.index === heads[e.wordId] && e.char && e.active && !e.targeted && e.x > 0 && e.x < W && e.y > 0);
       const plain = starts.filter(e => e.state !== 'ufo'); if (plain.length) starts = plain;
       starts.sort((a, b) => b.y - a.y);
-      if (starts[0]) { expected = starts[0].char; think = 350; }
+      if (starts[0]) { expected = starts[0].char; think = ${+process.env.THINK || 350}; }
     }
     if (!expected) return null;
     expected = expected.toLowerCase();
