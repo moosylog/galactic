@@ -48,6 +48,8 @@ The start screen is split into four small screens, so nothing needs scrolling.
 
 **Insert coin.** The blinking *INSERT COIN* line is flavour only. Pressing **Enter** (or PLAY) drops a coin with a short sound and starts the game a moment later. There is nothing to earn or spend, and no extra step. The same Enter key starts a new game from the end screen.
 
+**Menu music.** A short, upbeat tune starts as soon as the game loads if your browser allows sound. Most browsers block sound until you press a key or click, so a small *PRESS ANY KEY OR CLICK FOR SOUND* hint shows and the tune starts on your first key or click. It stops the moment you press Enter or PLAY. It follows the Music setting under Setup, Display.
+
 **Menu animation.** Stars, falling letters and a little ship play behind the menu. You can switch this off under Setup, Display. It is also off automatically if your system asks for reduced motion.
 
 ---
@@ -69,7 +71,7 @@ You can only start a word from its first letter, and you cannot jump between wor
 
 | Part | What it shows |
 |---|---|
-| **Status bar** | Score, wave/sector, combo, words per minute, accuracy, **HEALTH** and the **EMP** charge bar. |
+| **Status bar** | Score, **HI** (your best run so far; it turns yellow and follows your score once you pass it), wave/sector, combo, words per minute, accuracy, **HEALTH** and the **EMP** charge bar. |
 | **HEALTH** | Starts at 100%. Shown as ship icons (one per 20%) plus the percentage. Reaching 0 ends the run. |
 | **EMP bar** | Fills as you hit letters and earn bonuses. When full it glows and **Enter** detonates it (see [Waves, bosses and bonuses](#waves-bosses-and-bonuses)). |
 | **Word helper** | All current words in **one fixed row**, always in the same order (the order they appeared), so a word never jumps to a different place. Each word also keeps its spot after its neighbours are finished, and when a snake splits. Words that arrive while others are still on screen go into free space, or a second line above, so nothing jumps. Before you start a word, first letters are green. Once locked, your word gets a green box, finished letters fade and the next letter glows, while the other words dim. Golden words are gold. |
@@ -121,8 +123,10 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Boss waves** (every 5th wave). One long word, up to 8 letters. Type it cleanly to win.
 - **A wrong key** lets the boss **capture the two keys** involved (the previous and the current letter). They vanish from your keyboard.
+- The boss word is usually built around **one of your weak pairs** (not in daily runs). It is the pair you most need to practise, and a slip on it is what gets keys captured.
 - To rescue them you type **5 practice words** built around that pair. A typo resets the word (small health cost). A word that falls past the line costs health and is replaced by a new one. **EMP is disabled during a rescue.**
 - **An idle boss strikes** for 10 health if you stop typing for a while. "BOSS CHARGING" warns you at 70% of the timer.
+- **Rescued keys get dual fire.** Keys you free by typing the 5 rescue words fire two lasers (shown in yellow) and score **10% more** per letter for the rest of the run. Beating the boss before the rescue frees the keys without this bonus. The bonus is small on purpose, so it is never worth getting captured.
 - Beating a boss moves you to the next sector and restores some health.
 
 **EMP.** Fill the bar, then press **Enter**. It clears every letter on screen (50 points each) and deals 2 damage to a boss. It cannot be used during a rescue.
@@ -144,7 +148,24 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Last stand.** When your health drops to 20% or less, the screen edge pulses red, time runs 15% slower and your points count 1.5 times. It switches off when you heal above 20%. It stacks with wave modifiers.
 
-**Music.** A short loop plays during the game and follows your play. It starts with just the beat. At a combo of **10** a bass line joins, at **25** an arpeggio, at **50** a lead melody. **They all drop out the moment you slip**, so a clean streak is something you can hear. The tempo rises slowly as waves pass and speeds up a little during bosses. In last stand the music is muffled. Pausing silences it. Switch it off in Setup, Display.
+**Music.** A short loop plays during the game and follows your play. It starts with just the beat. At a combo of **10** a bass line joins, at **25** an arpeggio, at **50** a lead melody. **They all drop out the moment you slip**, so a clean streak is something you can hear. The tempo rises slowly as waves pass and speeds up a little during bosses. In last stand the music is muffled. Pausing silences it. Switch it off in Setup, Display. The same setting controls the start-screen tune.
+
+**Sector badges and pace.** Just under the status bar, the top-right shows your sector and a badge for every sector you have cleared: a cyan chevron for each, a purple star for every 5, and a gold diamond for every 10. On the top-left, **PACE** compares your score at the start of each wave with your best run's score at the start of the same wave, for example *PACE +1,240 VS BEST* in green when you are ahead and red when you are behind. It appears from wave 2 once you have a best run saved with this feature (runs saved by older versions have no pace data until you set a new best), and it is not shown in daily runs.
+
+**Perks (after every sector).** When a sector is cleared and the hyperspace jump ends, you choose **1 of 3 perks** for the rest of the run. Press **1**, **2** or **3**, or tap a card. The next sector starts once you have chosen. The end screen lists the perks you took.
+- **REPAIR:** restore 30% health (only offered when you are hurt).
+- **AEGIS:** a shield now and a fresh one at the start of every sector.
+- **SLOW DIVES:** diving letters fall 15% slower (twice at most).
+- **CAPACITOR:** the EMP charges 30% faster (twice at most).
+- **STEADY HANDS:** a typo keeps half your combo instead of wiping it.
+- **TWIN LASERS:** two random keys fire double shots (up to three times).
+- **LONG CLOCK:** the wave clock gives you 25% more time.
+- **ARCADE LINK:** an arcade drone is guaranteed on the next wave that can have one.
+In a daily run the offers depend only on the date and the sector, so everyone sees the same choices and the shared word sequence is not affected.
+
+**Arcade mode (optional, time-limited).** Now and then a purple **ARCADE** drone flies across (at most one per wave, from wave 2; never during bosses, rescues or Centipede waves). Type its letter to shoot it, then press **Space** within 8 seconds to launch, or ignore it and nothing changes. For **15 seconds** the on-screen keyboard is removed and you fly a ship: **arrow keys** move it and **Space** fires **double shots**. Every letter you hit scores 100 points (times your score multiplier). It does not change your combo, accuracy or WPM, **Enter** still fires the EMP, and letters you hit leave their words as if they had fallen. The mode ends early if a boss or a Centipede wave arrives. Letters that reach the danger line still cost health.
+
+**Challenge Stage tally.** When a Challenge Stage ends, a message shows how many letters you hit out of the total, for example *CHALLENGE STAGE: 7/8 HIT*, with *PERFECT!* if you got them all. A perfect wave (no wrong key) now plays a short rising jingle.
 
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
 
@@ -225,7 +246,9 @@ All settings are in **Setup** on the start screen. **They cannot be changed mid-
 | **Left / Right arrow** (start screen) | Change the division. |
 | **Esc** (a start sub-screen) | Back to the title screen. |
 | Letter keys | Start a word with its first letter, then type it in order. |
+| **1 / 2 / 3** (perk screen) | Choose a perk after a sector. |
 | **Enter** | Detonate EMP when the bar is full. On the end screen: play again. |
+| **Space** (after collecting the ARCADE drone) | Launch arcade mode. During it: **arrow keys** fly the ship and **Space** fires double shots. |
 | **Esc** | Pause or resume. |
 | **PAUSE** button (bottom left) | Same as Esc. |
 | **EXIT** button / **EXIT TO MAIN SCREEN** | End the run and return to the title screen. See below. |
@@ -311,7 +334,9 @@ Records, typing statistics, your custom layout and the keyboard size are stored 
   - `index.html`, `css/styles.css`
   - `js/config.js` (hardware geometry, difficulty, words, helpers)
   - `js/entities.js` (enemies, boss, lasers)
-  - `js/music.js` (the combo-driven music)
+  - `js/music.js` (the combo-driven music and the start-screen tune)
+  - `js/arcade.js` (the optional arcade mode)
+  - `js/perks.js` (the perk picks after each sector)
   - `js/main.js` (game loop, input, interface, records)
 - **Tests:** `npm test` runs the smoke, practice and pacing tests.
 - **Balance tool:** `node tools/balance-sim.js` runs the real game code headlessly with scripted typists of different skill and prints survival, waves and score. Use it to tune difficulty before changing numbers.

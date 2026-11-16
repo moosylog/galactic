@@ -18,6 +18,7 @@
     <div id="hud">
         <div class="hud-group">
             <div class="hud-item"><span class="hud-lbl">SCORE</span><span class="hud-val" id="ui-score">000000</span></div>
+            <div class="hud-item hud-hi"><span class="hud-lbl">HI</span><span class="hud-val" id="ui-hi">000000</span></div>
             <div class="hud-item"><span class="hud-lbl">WAVE</span><span class="hud-val" id="ui-wave">1</span></div>
             <div class="combo" id="ui-combo">0x COMBO</div>
         </div>
@@ -67,6 +68,7 @@
                 </select>
                 <button class="btn-action" id="btn-start" onclick="insertCoin()">PLAY</button>
                 <div class="coin" id="coin-line">INSERT COIN <small>PRESS ENTER</small></div>
+                <div class="sound-hint" id="sound-hint" style="display:none">PRESS ANY KEY OR CLICK FOR SOUND</div>
                 <div class="menu-links">
                     <a tabindex="0" onclick="showScreen('hall')">[H] HALL OF FAME</a>
                     <a tabindex="0" onclick="showScreen('setup')">[S] SETUP</a>
@@ -135,7 +137,7 @@
                         </div>
                         <div>
                             <label>Music</label>
-                            <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music that builds with your combo</label>
+                            <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music: a tune on the start screen, and a loop that builds with your combo</label>
                         </div>
                     </div>
                 </div>
@@ -178,6 +180,7 @@
                 <div>AVERAGE WPM <span id="end-wpm" style="color:var(--neon-purple)">0</span></div>
                 <div>MAX COMBO <span id="end-combo" style="color:var(--neon-yellow)">0x</span></div>
                 <div>FINAL ACCURACY <span id="end-acc" style="color:var(--neon-blue)">100%</span></div>
+                <div id="end-perks" style="margin-top:6px;font-size:0.85rem;color:#8fa3b8"></div>
                 <div id="end-bigrams" style="margin-top:10px;font-size:0.85rem;color:#8fa3b8"></div>
             </div>
 
@@ -197,12 +200,22 @@
 
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/arcade.js"></script>
+<script src="js/perks.js"></script>
 <script src="js/music.js"></script>
 <script src="js/main.js"></script>
 <div id="game-controls" style="position:fixed;bottom:6px;left:8px;z-index:20;display:none;gap:8px">
         <button class="ctl" id="btn-pause" onclick="pauseGame()">PAUSE (ESC)</button>
         <button class="ctl" id="btn-exit" onclick="exitToMenu()">EXIT</button>
     </div>
+    <div id="perk-screen" class="overlay-screen" style="display:none">
+        <div class="menu-box" style="text-align:center">
+            <h1 id="perk-title">CHOOSE A PERK</h1>
+            <p style="color:#8fa3b8;font-family:'Share Tech Mono',monospace">Press 1, 2 or 3, or tap a card. It lasts for the rest of the run.</p>
+            <div id="perk-cards" class="perk-cards"></div>
+        </div>
+    </div>
+
     <div id="pause-screen" class="overlay-screen" style="display:none">
         <div class="menu-box" style="text-align:center">
             <h1>PAUSED</h1>
