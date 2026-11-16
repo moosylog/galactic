@@ -48,8 +48,6 @@ The start screen is split into four small screens, so nothing needs scrolling.
 
 **Insert coin.** The blinking *INSERT COIN* line is flavour only. Pressing **Enter** (or PLAY) drops a coin with a short sound and starts the game a moment later. There is nothing to earn or spend, and no extra step. The same Enter key starts a new game from the end screen.
 
-**Menu music.** A short, upbeat tune starts as soon as the game loads if your browser allows sound. Most browsers block sound until you press a key or click, so a small *PRESS ANY KEY OR CLICK FOR SOUND* hint shows and the tune starts on your first key or click. It stops the moment you press Enter or PLAY. It follows the Music setting under Setup, Display.
-
 **Menu animation.** Stars, falling letters and a little ship play behind the menu. You can switch this off under Setup, Display. It is also off automatically if your system asks for reduced motion.
 
 ---
@@ -123,10 +121,8 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Boss waves** (every 5th wave). One long word, up to 8 letters. Type it cleanly to win.
 - **A wrong key** lets the boss **capture the two keys** involved (the previous and the current letter). They vanish from your keyboard.
-- The boss word is usually built around **one of your weak pairs** (not in daily runs). It is the pair you most need to practise, and a slip on it is what gets keys captured.
 - To rescue them you type **5 practice words** built around that pair. A typo resets the word (small health cost). A word that falls past the line costs health and is replaced by a new one. **EMP is disabled during a rescue.**
 - **An idle boss strikes** for 10 health if you stop typing for a while. "BOSS CHARGING" warns you at 70% of the timer.
-- **Rescued keys get dual fire.** Keys you free by typing the 5 rescue words fire two lasers (shown in yellow) and score **10% more** per letter for the rest of the run. Beating the boss before the rescue frees the keys without this bonus. The bonus is small on purpose, so it is never worth getting captured.
 - Beating a boss moves you to the next sector and restores some health.
 
 **EMP.** Fill the bar, then press **Enter**. It clears every letter on screen (50 points each) and deals 2 damage to a boss. It cannot be used during a rescue.
@@ -148,7 +144,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Last stand.** When your health drops to 20% or less, the screen edge pulses red, time runs 15% slower and your points count 1.5 times. It switches off when you heal above 20%. It stacks with wave modifiers.
 
-**Music.** A short loop plays during the game and follows your play. It starts with just the beat. At a combo of **10** a bass line joins, at **25** an arpeggio, at **50** a lead melody. **They all drop out the moment you slip**, so a clean streak is something you can hear. The tempo rises slowly as waves pass and speeds up a little during bosses. In last stand the music is muffled. Pausing silences it. Switch it off in Setup, Display. The same setting controls the start-screen tune.
+**Music.** A short loop plays during the game and follows your play. It starts with just the beat. At a combo of **10** a bass line joins, at **25** an arpeggio, at **50** a lead melody. **They all drop out the moment you slip**, so a clean streak is something you can hear. The tempo rises slowly as waves pass and speeds up a little during bosses. In last stand the music is muffled. Pausing silences it. Switch it off in Setup, Display.
 
 **Combo milestones.** Every 25 in a row gives EMP charge, and every 50 also restores some health.
 
@@ -315,7 +311,7 @@ Records, typing statistics, your custom layout and the keyboard size are stored 
   - `index.html`, `css/styles.css`
   - `js/config.js` (hardware geometry, difficulty, words, helpers)
   - `js/entities.js` (enemies, boss, lasers)
-  - `js/music.js` (the combo-driven music and the start-screen tune)
+  - `js/music.js` (the combo-driven music)
   - `js/main.js` (game loop, input, interface, records)
 - **Tests:** `npm test` runs the smoke, practice and pacing tests.
 - **Balance tool:** `node tools/balance-sim.js` runs the real game code headlessly with scripted typists of different skill and prints survival, waves and score. Use it to tune difficulty before changing numbers.

@@ -67,7 +67,6 @@
                 </select>
                 <button class="btn-action" id="btn-start" onclick="insertCoin()">PLAY</button>
                 <div class="coin" id="coin-line">INSERT COIN <small>PRESS ENTER</small></div>
-                <div class="sound-hint" id="sound-hint" style="display:none">PRESS ANY KEY OR CLICK FOR SOUND</div>
                 <div class="menu-links">
                     <a tabindex="0" onclick="showScreen('hall')">[H] HALL OF FAME</a>
                     <a tabindex="0" onclick="showScreen('setup')">[S] SETUP</a>
@@ -136,7 +135,7 @@
                         </div>
                         <div>
                             <label>Music</label>
-                            <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music: a tune on the start screen, and a loop that builds with your combo</label>
+                            <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music that builds with your combo</label>
                         </div>
                     </div>
                 </div>
