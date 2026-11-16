@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], dualChars: {}, snakeWave: false, focusKeys: new Set(), stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -375,7 +375,7 @@ function buildHUD() {
         let px = offsetX + (k.x * u) + (u/2); let py = offsetY + (k.y * u) + (u/2);
 
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
-            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false };
+            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: false, isAbducted: false };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
             tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
@@ -617,14 +617,6 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
         if (f.length) pool = f;
-    } else if (isBoss && !STATE.daily && Math.random() < 0.7) {
-        // a boss is usually built around ONE of your weak pairs (not all of them: a slip captures those two keys)
-        const wb = weakBigrams();
-        if (wb.length) {
-            const pick = wb[Math.floor(Math.random() * Math.min(3, wb.length))];
-            const hit = pool.filter(w => !usedWords.has(w) && w.includes(pick));
-            if (hit.length) pool = hit;
-        }
     } else if (!isBoss && !STATE.daily && Math.random() < 0.35) {
         const wb = weakBigrams();
         const hit = pool.filter(w => !usedWords.has(w) && wb.some(b => w.includes(b)));
@@ -764,7 +756,7 @@ function damagePlayer(amt) {
     }
 }
 
-function resetToMenu() { if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; showScreen('title'); startMenuFx(); menuMusicWant(); }
+function resetToMenu() { if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; showScreen('title'); startMenuFx(); }
 
 function resizeCanvas() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -919,9 +911,9 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    STATE.dualChars = {}; initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
+    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
-    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); Music.start();
+    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); Music.start();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
@@ -1243,7 +1235,7 @@ function coinSound() {
 }
 function insertCoin() {
     if (STATE.active || coinPending) return;
-    coinPending = true; MenuMusic.stop(); menuMusicArmed = false; soundHint(false); coinSound();
+    coinPending = true; coinSound();
     const c = byId('coin-line'); if (c) c.textContent = 'CREDIT 01';
     setTimeout(() => { coinPending = false; if (c) c.innerHTML = 'INSERT COIN <small>PRESS ENTER</small>'; if (!STATE.active) startGame(); }, 380);
 }
@@ -1287,32 +1279,7 @@ function importProgress(ev) {
 }
 // attract-mode background: drifting stars, falling letters and a little ship that shoots them
 let menuFxRunning = false, menuFxOn = true;
-// start-screen tune: plays as soon as the browser allows audio (the first key or click), stops when a game starts
-let menuMusicArmed = false, menuMusicProbe = false;
-function soundHint(on) { const h = byId('sound-hint'); if (h) h.style.display = on ? 'block' : 'none'; }
-function menuMusicShown() { return !!UI.menu && UI.menu.style.display !== 'none'; }
-function menuMusicWant() {
-    if (!Music.on || STATE.active) return;
-    if (!actx) { try { initAudio(); } catch (e) {} }   // try at load: allowed in some browsers (for example a site you visit often)
-    if (actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); return; }
-    menuMusicArmed = true; soundHint(true);   // blocked: wait for the first key or click (listeners in initMenu)
-    if (!menuMusicProbe) {   // some browsers switch the audio on a moment after load
-        menuMusicProbe = true;
-        setTimeout(() => { menuMusicProbe = false; if (menuMusicArmed && !STATE.active && Music.on && menuMusicShown() && actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); } }, 300);
-    }
-}
-function menuMusicGesture(e) {
-    if (!menuMusicArmed || STATE.active || !Music.on) return;
-    if (e.type === 'keydown' && (e.key === 'Enter' || e.key === 'Escape')) return;   // Enter starts the game, so no tune for that press
-    if (!menuMusicShown()) return;
-    menuMusicArmed = false; soundHint(false); MenuMusic.start();
-}
-function setMusic(on) {
-    Music.on = !!on; savePrefs({ music: !!on });
-    if (!on) { Music.stop(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); }
-    else if (STATE.active) { if (!STATE.paused) Music.start(); }
-    else { menuMusicArmed = false; soundHint(false); MenuMusic.start(); }   // the checkbox click counts as the gesture the browser wants
-}
+function setMusic(on) { Music.on = !!on; savePrefs({ music: !!on }); if (!on) Music.stop(); else if (STATE.active && !STATE.paused) Music.start(); }
 function setMenuFx(on) { menuFxOn = !!on; savePrefs({ menuFx: !!on }); if (on) startMenuFx(); }
 function startMenuFx() {
     const cv = byId('menu-fx');
@@ -1348,9 +1315,6 @@ function initMenu() {
     setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
     showScreen(p.seenHowTo ? 'title' : 'howto');
     startMenuFx();
-    document.addEventListener('keydown', menuMusicGesture, true); document.addEventListener('pointerdown', menuMusicGesture, true);
-    document.addEventListener('visibilitychange', () => MenuMusic.duck(!!document.hidden));
-    menuMusicWant();
 }
 
 // ---- a custom layout belongs to the keyboard it was made for ----

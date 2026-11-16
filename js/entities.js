@@ -87,8 +87,9 @@ class BossShip {
                         this.releaseIndex++; 
                     }
                 } else {
-                    markRescued(this.capturedKeys);
-                    createPopText('DUAL FIRE: +' + Math.round(DUAL_BONUS * 100) + '% SCORE ON ' + this.capturedKeys.map(c => c.toUpperCase()).join(' '), canvas.width/2, this.y - (60*STATE.sf), '#ffea00', 0.006);
+                    this.capturedKeys.forEach(char => {
+                        if (STATE.activeKeys[char]) STATE.activeKeys[char].isAbducted = false;
+                    });
                     this.capturedKeys = [];
                     this.keyAnimations = [];
                     STATE.hostages.active = false;
@@ -561,18 +562,10 @@ class BonusDrone {
     }
 }
 
-// Keys given back after the rescue words fire two lasers and score a little more (DUAL_BONUS). It lasts for the rest of the run.
-function markRescued(chars) {
-    chars.forEach(char => {
-        if (!STATE.activeKeys[char]) return;
-        STATE.activeKeys[char].isAbducted = false; STATE.activeKeys[char].isDual = true; STATE.dualChars[char] = true;
-    });
-}
-
 class Laser {
     constructor(x, y, targetEnemy, hitCombo, isDualOffset = 0) {
         this.x = x + isDualOffset; this.y = y; this.target = targetEnemy; this.hitCombo = hitCombo; 
-        this.dual = isDualOffset !== 0; this.speed = 45 * STATE.sf; this.active = true; this.color = (x < canvas.width/2) ? '#00f3ff' : '#ff0055';
+        this.speed = 45 * STATE.sf; this.active = true; this.color = (x < canvas.width/2) ? '#00f3ff' : '#ff0055';
     }
     update(dt) {
         if(!this.target.active) { this.active = false; return; }
@@ -617,7 +610,7 @@ class Laser {
             }
             
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod;
-            STATE.score += Math.floor((100 + Math.min(this.hitCombo, CURVE.comboCap) * 10) * STATE.scoreMultiplier * diffScoreMod * (this.dual ? 1 + DUAL_BONUS : 1)); 
+            STATE.score += Math.floor((100 + Math.min(this.hitCombo, CURVE.comboCap) * 10) * STATE.scoreMultiplier * diffScoreMod); 
             addEmpCharge(5 + this.hitCombo); updateUI(); return;
         }
         this.x += (dx/dist) * this.speed * (dt/16); this.y += (dy/dist) * this.speed * (dt/16);

@@ -303,8 +303,6 @@ function drawLastStand(ctx, time) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }
 
-// A key rescued from a boss fires two lasers and scores this much more per letter (kept small on purpose: it must never be worth getting captured).
-const DUAL_BONUS = 0.10;
 // ---- the difficulty curve: every number that makes the game harder over time lives here ----
 const CURVE = {
     // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.
