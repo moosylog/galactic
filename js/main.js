@@ -2,7 +2,7 @@
 "use strict";
 
 const UI = {
-    score: document.getElementById('ui-score'), 
+    score: document.getElementById('ui-score'), hi: document.getElementById('ui-hi'),
     wave: document.getElementById('ui-wave'),
     health: document.getElementById('ui-health'), 
     combo: document.getElementById('ui-combo'),
@@ -31,7 +31,7 @@ const UI = {
     practiceProgress: document.getElementById('practice-progress')
 };
 
-const UI_CACHE = { score: -1, wave: -1, hull: -1, combo: -1, wpm: -1, acc: -1 };
+const UI_CACHE = { hi: '', score: -1, wave: -1, hull: -1, combo: -1, wpm: -1, acc: -1 };
 
 const bgCanvas = document.getElementById('bg-canvas'); const bgCtx = bgCanvas.getContext('2d', { alpha: false });
 const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d');
@@ -40,7 +40,7 @@ let STATE = {
     active: false, wave: 1, sector: 1, score: 0, combo: 0, maxCombo: 0, hull: 100, emp: 0,
     sf: 1.0, lastFrame: 0, activeKeys: {}, currentTarget: null, bossRef: null,
     bioTracker: {}, bigrams: {}, accWindow: [], suspects: [], isSpawning: false,
-    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], snakeWave: false, focusKeys: new Set(), stolenKeys: [],
+    highScores: [], records: { best: null, recent: [] }, kbSize: 'compact', customByHw: {}, mushrooms: [], dualChars: {}, arcade: freshArcade(), perk: freshPerks(), perkOpen: null, pace: [], paceDelta: null, snakeWave: false, focusKeys: new Set(), stolenKeys: [],
     
     difficulty: 'contender', isHyperspace: false,
     textAssistantEnabled: false, 
@@ -154,6 +154,7 @@ function createExplosion(x, y, color) { for(let i=0; i<25; i++) particles.push(n
 
 function addEmpCharge(amount) {
     if(STATE.emp >= 100) return;
+    amount *= (STATE.perk && STATE.perk.empMul) || 1;
     STATE.emp = Math.min(100, STATE.emp + amount);
     UI.empFill.style.width = `${STATE.emp}%`;
     if(STATE.emp === 100) UI.empContainer.classList.add('emp-ready');
@@ -228,6 +229,20 @@ const AudioFX = {
         osc.frequency.setValueAtTime(880, actx.currentTime); osc.frequency.linearRampToValueAtTime(1760, actx.currentTime + 0.1);
         gain.gain.setValueAtTime(0.2, actx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, actx.currentTime + 0.3);
         osc.connect(gain); gain.connect(actx.destination); osc.start(); osc.stop(actx.currentTime + 0.3);
+    },
+    perfect: () => {   // a short rising run for a perfect wave
+        if(!actx) return; const t0 = actx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            const o = actx.createOscillator(), g = actx.createGain(), t = t0 + i * 0.07; o.type = 'square'; o.frequency.setValueAtTime(f, t);
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+            o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.22);
+        });
+    },
+    arcade: () => {   // a quick swoop down and back up
+        if(!actx) return; const t0 = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(); o.type = 'square';
+        o.frequency.setValueAtTime(1200, t0); o.frequency.exponentialRampToValueAtTime(300, t0 + 0.18); o.frequency.exponentialRampToValueAtTime(1500, t0 + 0.36);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+        o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0 + 0.42);
     },
     boss: () => {
         if(!actx) return; let osc = actx.createOscillator(), gain = actx.createGain(); osc.type = 'sine';
@@ -375,7 +390,7 @@ function buildHUD() {
         let px = offsetX + (k.x * u) + (u/2); let py = offsetY + (k.y * u) + (u/2);
 
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
-            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: false, isAbducted: false };
+            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
             tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
@@ -413,7 +428,7 @@ function drawShipHUD(time) {
     ctx.restore();
     for (let char in STATE.activeKeys) {
         let k = STATE.activeKeys[char];
-        if(k.isAbducted) continue; 
+        if(k.isAbducted || STATE.arcade.on) continue; 
 
         let isBeingTargeted = false;
         for(let i=0; i<enemies.length; i++) { if(!enemies[i].isBoss && enemies[i].char === char && enemies[i].state === 'dive') { isBeingTargeted = true; break; } }
@@ -617,6 +632,14 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
         if (f.length) pool = f;
+    } else if (isBoss && !STATE.daily && Math.random() < 0.7) {
+        // a boss is usually built around ONE of your weak pairs (not all of them: a slip captures those two keys)
+        const wb = weakBigrams();
+        if (wb.length) {
+            const pick = wb[Math.floor(Math.random() * Math.min(3, wb.length))];
+            const hit = pool.filter(w => !usedWords.has(w) && w.includes(pick));
+            if (hit.length) pool = hit;
+        }
     } else if (!isBoss && !STATE.daily && Math.random() < 0.35) {
         const wb = weakBigrams();
         const hit = pool.filter(w => !usedWords.has(w) && wb.some(b => w.includes(b)));
@@ -635,7 +658,10 @@ function spawnWave() {
     
     STATE.currentTarget = null; STATE.isSpawning = false;
     let isBossWave = (STATE.wave > 0 && STATE.wave % 5 === 0);
-    STATE.challenge = false; STATE.focusBigram = null; STATE.snakeWave = false; clearWaveMod();
+    // ghost pace: your score at the start of this wave, against your best run's score at the start of the same wave (not in daily runs)
+    STATE.pace[STATE.wave] = STATE.score;
+    { const bp = STATE.records.best && STATE.records.best.pace; STATE.paceDelta = (!STATE.daily && bp && STATE.wave > 1 && typeof bp[STATE.wave] === 'number') ? STATE.score - bp[STATE.wave] : null; }
+    STATE.challenge = false; STATE.challengeHit = 0; STATE.challengeMissed = 0; STATE.focusBigram = null; STATE.snakeWave = false; clearWaveMod();
     
     if (isBossWave) {
         AudioFX.boss(); UI.bossAlert.style.display = 'block'; setTimeout(() => UI.bossAlert.style.display = 'none', 3000);
@@ -705,6 +731,10 @@ function spawnUfo() {
 function updateUI() {
     if (!UI.score) return; 
     if (UI_CACHE.score !== STATE.score) { UI.score.textContent = String(STATE.score).padStart(6, '0'); UI_CACHE.score = STATE.score; }
+    if (UI.hi) {   // HI-SCORE: your best run so far, turning yellow and following your score once you pass it
+        const best = (STATE.records && STATE.records.best && STATE.records.best.score) || 0, hi = Math.max(best, STATE.score), beating = best > 0 && STATE.score > best, key = hi + ':' + beating;
+        if (UI_CACHE.hi !== key) { UI.hi.textContent = String(hi).padStart(6, '0'); UI.hi.style.color = beating ? 'var(--neon-yellow)' : ''; UI_CACHE.hi = key; }
+    }
     if (UI_CACHE.wave !== STATE.wave) { UI.wave.textContent = STATE.wave; UI_CACHE.wave = STATE.wave; }
     
     if (UI_CACHE.hull !== STATE.hull) {
@@ -751,12 +781,13 @@ function damagePlayer(amt) {
             UI.endAcc.textContent = accPct + "%";
         }
         
+        { const ep = document.getElementById('end-perks'); if (ep) ep.textContent = STATE.perk.list.length ? 'PERKS: ' + STATE.perk.list.join(', ') : ''; }
         drawHeatmap(); 
         showBigramReport(); if (UI.endScreen) UI.endScreen.style.display = 'flex'; 
     }
 }
 
-function resetToMenu() { if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; showScreen('title'); startMenuFx(); }
+function resetToMenu() { closePerkPicker(); if(UI.endScreen) UI.endScreen.style.display = 'none'; if(UI.menu) UI.menu.style.display = 'flex'; showScreen('title'); startMenuFx(); menuMusicWant(); }
 
 function resizeCanvas() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -765,6 +796,28 @@ function resizeCanvas() {
     if(STATE.active) buildHUD(); 
 }
 window.addEventListener('resize', resizeCanvas);
+
+// Sector badges (one chevron per sector, a star for every 5, a diamond for every 10) and the pace readout, drawn just below the HUD bar.
+function stageBadges(n) { return { tens: Math.floor(n / 10), fives: Math.floor((n % 10) / 5), ones: n % 5 }; }
+function drawStageHud(ctx) {
+    const sf = STATE.sf, W = canvas.width, y = 62 * sf, s = 8 * sf, gap = 6 * sf, b = stageBadges(Math.max(0, STATE.sector - 1));
+    const items = [...Array(b.tens).fill('d'), ...Array(b.fives).fill('s'), ...Array(b.ones).fill('c')];
+    const startX = W - 16 * sf - items.length * (2 * s + gap) + s;
+    ctx.save(); ctx.textBaseline = 'middle'; ctx.shadowBlur = 6 * sf;
+    items.forEach((k, i) => {
+        const cx = startX + i * (2 * s + gap); ctx.beginPath();
+        if (k === 'd') { ctx.fillStyle = ctx.shadowColor = '#ffea00'; ctx.moveTo(cx, y - s); ctx.lineTo(cx + s * 0.8, y); ctx.lineTo(cx, y + s); ctx.lineTo(cx - s * 0.8, y); ctx.closePath(); ctx.fill(); }
+        else if (k === 's') { ctx.fillStyle = ctx.shadowColor = '#bc13fe'; for (let p = 0; p < 10; p++) { const r = p % 2 ? s * 0.45 : s, a = -Math.PI / 2 + p * Math.PI / 5; ctx[p ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * r, y + Math.sin(a) * r); } ctx.closePath(); ctx.fill(); }
+        else { ctx.strokeStyle = ctx.shadowColor = '#00f3ff'; ctx.lineWidth = 2.4 * sf; ctx.lineJoin = 'round'; for (const o of [-0.45, 0.35]) { ctx.moveTo(cx - s, y + s * o); ctx.lineTo(cx, y + s * (o + 0.65)); ctx.lineTo(cx + s, y + s * o); } ctx.stroke(); }
+    });
+    ctx.shadowBlur = 0; ctx.font = `700 ${Math.floor(12 * sf)}px 'Share Tech Mono', monospace`; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillText('SECTOR ' + STATE.sector, startX - (items.length ? s + 8 * sf : -s), y);
+    if (STATE.paceDelta !== null) {
+        const d = STATE.paceDelta; ctx.textAlign = 'left'; ctx.fillStyle = d >= 0 ? '#00ff66' : '#ff0055';
+        ctx.fillText('PACE ' + (d >= 0 ? '+' : '-') + String(Math.abs(d)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' VS BEST', 16 * sf, y);
+    }
+    ctx.restore();
+}
 
 function gameLoop(time) {
     if(!STATE.active) return;
@@ -816,6 +869,7 @@ function gameLoop(time) {
     if (bonusDrones.length === 0 && !STATE.isHyperspace && Math.random() < 0.002) {
         bonusDrones.push(new BonusDrone(false)); 
     }
+    maybeSpawnArcadeDrone(dt);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -832,10 +886,14 @@ function gameLoop(time) {
     if ((cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
         if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVERS WILL DIVE', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.diveFuse = performance.now() + 1500; }); }
         
+        if (cleared && STATE.challenge) {   // challenge stage tally
+            const h = STATE.challengeHit || 0, m = STATE.challengeMissed || 0;
+            if (h + m > 0) createPopText('CHALLENGE STAGE: ' + h + '/' + (h + m) + ' HIT' + (m === 0 ? '  PERFECT!' : ''), canvas.width/2, canvas.height/2 - 150 * STATE.sf, m === 0 ? '#00ff66' : '#ffea00');
+        }
         if (cleared && STATE.waveTotal > 0 && STATE.waveCorrect === STATE.waveTotal) {
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty].scoreMod;
             let bonus = Math.floor(1000 * STATE.wave * diffScoreMod * (STATE.challenge ? 2 : 1));
-            STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healPerfect));
+            STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healPerfect)); AudioFX.perfect();
             createPopText(`PERFECT WAVE! +${bonus}`, canvas.width/2, canvas.height/2 - 50, '#00f3ff');
         }
         STATE.waveTotal = 0; STATE.waveCorrect = 0;
@@ -853,9 +911,12 @@ function gameLoop(time) {
             const rid = STATE.runId;
             setTimeout(() => {
                 if (rid !== STATE.runId || !STATE.active) return;
-                STATE.isHyperspace = false;
-                STATE.wave++;
-                spawnWave();
+                openPerkPicker(() => {   // the next sector starts once a perk is chosen
+                    if (rid !== STATE.runId || !STATE.active) return;
+                    STATE.isHyperspace = false;
+                    STATE.wave++;
+                    spawnWave();
+                });
             }, 2500); 
         } else if (!STATE.isHyperspace) {
             STATE.wave++; 
@@ -883,6 +944,7 @@ function gameLoop(time) {
         for(let i=enemies.length-1; i>=0; i--) { if(!enemies[i].active) enemies.splice(i, 1); else { enemies[i].update(dt, time); enemies[i].draw(ctx, dt); } }
         for(let i=bonusDrones.length-1; i>=0; i--) { if(!bonusDrones[i].active) bonusDrones.splice(i, 1); else { bonusDrones[i].update(dt); bonusDrones[i].draw(ctx); } }
         for(let i=lasers.length-1; i>=0; i--) { if(!lasers[i].active) lasers.splice(i, 1); else { lasers[i].update(dt); lasers[i].draw(ctx); } }
+        arcadeUpdate(dt); drawArcade(ctx); drawStageHud(ctx);
     }
     
     ctx.globalAlpha = 1.0; const pBatches = {};
@@ -911,9 +973,9 @@ function gameLoop(time) {
 }
 
 function startGame() {
-    initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
+    STATE.dualChars = {}; STATE.arcade = freshArcade(); STATE.perk = freshPerks(); STATE.pace = []; STATE.paceDelta = null; closePerkPicker(); initAudio(); resizeCanvas(); buildHUD(); STATE.accWindow = []; lastGoodChar = null; STATE.newBest = false; STATE.bigramsStart = JSON.parse(JSON.stringify(STATE.bigrams)); STATE.suspects = []; computeSuspects(); STATE.focusKeys = focusKeySet();
     STATE.runId = (STATE.runId || 0) + 1; STATE.paused = false; setControls(true); snakes = []; STATE.mushrooms = []; STATE.hLayout = null;
-    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); Music.start();
+    STATE.modSeed = (Math.random() * 1e9) | 0; STATE.lastStand = false; clearWaveMod(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); Music.start();
     const ps = document.getElementById('pause-screen'); if (ps) ps.style.display = 'none';
     STATE.active = true; STATE.score = 0; STATE.wave = 1; STATE.sector = 1; STATE.hull = 100; STATE.combo = 0; STATE.maxCombo = 0; STATE.emp = 0; STATE.bossRef = null;
     usedWords.clear(); STATE.bioTracker = {}; lasers = []; particles = []; popTexts = []; bonusDrones = []; STATE.isSpawning = false; STATE.currentTarget = null; STATE.stolenKeys = [];
@@ -953,8 +1015,11 @@ function startGame() {
     STATE.lastFrame = performance.now(); requestAnimationFrame(gameLoop);
 }
 
+document.addEventListener('keyup', (e) => { arcadeKey(e, false); });
 let lastKeyPress = 0;
 document.addEventListener('keydown', (e) => {
+    if (perkKey(e)) return;
+    if (arcadeKey(e, true)) return;
     if(!STATE.active || STATE.paused || e.repeat || STATE.isHyperspace) return; 
     
     let now = performance.now();
@@ -1071,7 +1136,7 @@ document.addEventListener('keydown', (e) => {
             document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 200);
         }
 
-        AudioFX.error(); STATE.combo = 0; 
+        AudioFX.error(); STATE.combo = typoCombo(STATE.combo); 
         
         updateScoreMultiplier();
         
@@ -1117,7 +1182,7 @@ document.addEventListener('keydown', (e) => {
 function setControls(show) { const g = document.getElementById('game-controls'); if (g) g.style.display = show ? 'flex' : 'none'; }
 function pauseGame() {
     if (!STATE.active || STATE.paused) return;
-    STATE.paused = true; STATE.pausedAt = performance.now(); Music.duck(true);
+    STATE.paused = true; STATE.arcade.keys = {}; STATE.pausedAt = performance.now(); Music.duck(true);
     const p = document.getElementById('pause-screen'); if (p) p.style.display = 'flex';
 }
 function resumeGame() {
@@ -1235,7 +1300,7 @@ function coinSound() {
 }
 function insertCoin() {
     if (STATE.active || coinPending) return;
-    coinPending = true; coinSound();
+    coinPending = true; MenuMusic.stop(); menuMusicArmed = false; soundHint(false); coinSound();
     const c = byId('coin-line'); if (c) c.textContent = 'CREDIT 01';
     setTimeout(() => { coinPending = false; if (c) c.innerHTML = 'INSERT COIN <small>PRESS ENTER</small>'; if (!STATE.active) startGame(); }, 380);
 }
@@ -1279,7 +1344,32 @@ function importProgress(ev) {
 }
 // attract-mode background: drifting stars, falling letters and a little ship that shoots them
 let menuFxRunning = false, menuFxOn = true;
-function setMusic(on) { Music.on = !!on; savePrefs({ music: !!on }); if (!on) Music.stop(); else if (STATE.active && !STATE.paused) Music.start(); }
+// start-screen tune: plays as soon as the browser allows audio (the first key or click), stops when a game starts
+let menuMusicArmed = false, menuMusicProbe = false;
+function soundHint(on) { const h = byId('sound-hint'); if (h) h.style.display = on ? 'block' : 'none'; }
+function menuMusicShown() { return !!UI.menu && UI.menu.style.display !== 'none'; }
+function menuMusicWant() {
+    if (!Music.on || STATE.active) return;
+    if (!actx) { try { initAudio(); } catch (e) {} }   // try at load: allowed in some browsers (for example a site you visit often)
+    if (actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); return; }
+    menuMusicArmed = true; soundHint(true);   // blocked: wait for the first key or click (listeners in initMenu)
+    if (!menuMusicProbe) {   // some browsers switch the audio on a moment after load
+        menuMusicProbe = true;
+        setTimeout(() => { menuMusicProbe = false; if (menuMusicArmed && !STATE.active && Music.on && menuMusicShown() && actx && actx.state === 'running') { menuMusicArmed = false; soundHint(false); MenuMusic.start(); } }, 300);
+    }
+}
+function menuMusicGesture(e) {
+    if (!menuMusicArmed || STATE.active || !Music.on) return;
+    if (e.type === 'keydown' && (e.key === 'Enter' || e.key === 'Escape')) return;   // Enter starts the game, so no tune for that press
+    if (!menuMusicShown()) return;
+    menuMusicArmed = false; soundHint(false); MenuMusic.start();
+}
+function setMusic(on) {
+    Music.on = !!on; savePrefs({ music: !!on });
+    if (!on) { Music.stop(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); }
+    else if (STATE.active) { if (!STATE.paused) Music.start(); }
+    else { menuMusicArmed = false; soundHint(false); MenuMusic.start(); }   // the checkbox click counts as the gesture the browser wants
+}
 function setMenuFx(on) { menuFxOn = !!on; savePrefs({ menuFx: !!on }); if (on) startMenuFx(); }
 function startMenuFx() {
     const cv = byId('menu-fx');
@@ -1315,6 +1405,9 @@ function initMenu() {
     setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
     showScreen(p.seenHowTo ? 'title' : 'howto');
     startMenuFx();
+    document.addEventListener('keydown', menuMusicGesture, true); document.addEventListener('pointerdown', menuMusicGesture, true);
+    document.addEventListener('visibilitychange', () => MenuMusic.duck(!!document.hidden));
+    menuMusicWant();
 }
 
 // ---- a custom layout belongs to the keyboard it was made for ----

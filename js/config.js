@@ -239,7 +239,7 @@ function recordRun() {
     const entry = { t: Date.now(), score: STATE.score, wave: STATE.wave, diff: STATE.difficulty, daily: !!STATE.daily,
         dur: Math.round((performance.now() - STATE.startTime) / 1000), keys: problemKeys() };
     STATE.newBest = entry.score > 0 && (!STATE.records.best || entry.score > STATE.records.best.score);
-    if (STATE.newBest) STATE.records.best = entry;
+    if (STATE.newBest) STATE.records.best = Object.assign({}, entry, { pace: (STATE.pace || []).slice() });   // only the best run keeps its per-wave pace
     STATE.records.recent.unshift(entry);
     STATE.records.recent.length = Math.min(STATE.records.recent.length, 10);
 }
@@ -303,6 +303,8 @@ function drawLastStand(ctx, time) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
 }
 
+// A key rescued from a boss fires two lasers and scores this much more per letter (kept small on purpose: it must never be worth getting captured).
+const DUAL_BONUS = 0.10;
 // ---- the difficulty curve: every number that makes the game harder over time lives here ----
 const CURVE = {
     // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.
@@ -325,9 +327,9 @@ function reqWpm(wave) { const [a, b] = curveOf(CURVE.reqWpm); return Math.min(CU
 // The fixed parts (getting started, finding each word) shrink as waves pass, so even the fastest typist is eventually outpaced.
 function waveAllowedMs() {
     const w = STATE.wave || 1;
-    return Math.max(CURVE.reqBaseFloor, CURVE.reqBaseMs - CURVE.reqBaseDecay * w)
+    return ((STATE.perk && STATE.perk.clockMul) || 1) * (Math.max(CURVE.reqBaseFloor, CURVE.reqBaseMs - CURVE.reqBaseDecay * w)
         + (STATE.waveWords || 0) * Math.max(CURVE.reqWordFloor, CURVE.reqWordMs - CURVE.reqWordDecay * w)
-        + (STATE.waveLetters || 0) * 12000 / reqWpm(w);
+        + (STATE.waveLetters || 0) * 12000 / reqWpm(w));
 }
 // Waves 1 and 2, boss waves, challenge stages and the wave before a boss must be cleared; every other wave runs on the clock.
 function waveClockApplies() { const w = STATE.wave || 1; return w >= 3 && w % 5 !== 0 && (w + 1) % 5 !== 0 && !STATE.challenge; }

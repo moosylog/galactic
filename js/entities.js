@@ -87,9 +87,8 @@ class BossShip {
                         this.releaseIndex++; 
                     }
                 } else {
-                    this.capturedKeys.forEach(char => {
-                        if (STATE.activeKeys[char]) STATE.activeKeys[char].isAbducted = false;
-                    });
+                    markRescued(this.capturedKeys);
+                    createPopText('DUAL FIRE: +' + Math.round(DUAL_BONUS * 100) + '% SCORE ON ' + this.capturedKeys.map(c => c.toUpperCase()).join(' '), canvas.width/2, this.y - (60*STATE.sf), '#ffea00', 0.006);
                     this.capturedKeys = [];
                     this.keyAnimations = [];
                     STATE.hostages.active = false;
@@ -409,7 +408,7 @@ class SwarmEnemy {
     update(dt, time) {
         let diff = DATA.DIFFICULTY[STATE.difficulty || 'contender'];
         let waveScale = Math.min(CURVE.speedCap, STATE.wave * curveOf(CURVE.speedPerWave)); 
-        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150)) * (STATE.speedMod || 1);
+        let baseSpeed = (diff.baseSpeed + waveScale) * Math.min(1.4, Math.max(0.6, 0.6 + STATE.currentWPM / 150)) * (STATE.speedMod || 1) * ((STATE.perk && STATE.perk.diveMul) || 1);
 
         if (this.state === 'ufo') {
             this.x += this.vx * (dt / 16);
@@ -461,7 +460,7 @@ class SwarmEnemy {
         }
 
         let splitLine = canvas.height - hudHeight();
-        if(this.y > splitLine) { this.active = false; this.crossed = true; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(missDamage(diff)); } createExplosion(this.x, this.y, this.color); }
+        if(this.y > splitLine) { this.active = false; this.crossed = true; if (STATE.challenge) STATE.challengeMissed = (STATE.challengeMissed || 0) + 1; if (!STATE.challenge) { if (STATE.shield) { STATE.shield = false; createPopText('SHIELD BLOCKED!', this.x, this.y, '#ffd700'); } else damagePlayer(missDamage(diff)); } createExplosion(this.x, this.y, this.color); }
     }
 
     draw(ctx) {
@@ -516,8 +515,8 @@ class SwarmEnemy {
 }
 
 class BonusDrone {
-    constructor(isRescue = false) {
-        this.isRescue = isRescue; this.color = isRescue ? '#ffea00' : '#00ff66'; 
+    constructor(isRescue = false, kind = 'emp') {
+        this.isRescue = isRescue; this.kind = kind; this.color = isRescue ? '#ffea00' : (kind === 'arcade' ? '#bc13fe' : '#00ff66'); this.rgb = isRescue ? '255,234,0' : (kind === 'arcade' ? '188,19,254' : '0,255,102');
         let keys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted);
         this.char = keys.length > 0 ? keys[Math.floor(Math.random() * keys.length)] : 'a';
         this.y = (100 + Math.random() * 200) * STATE.sf;
@@ -536,7 +535,7 @@ class BonusDrone {
         let sizeMod = STATE.sf * 1.5; let now = Date.now();
         ctx.shadowBlur = 25 * STATE.sf; ctx.shadowColor = this.color; 
         let pulse = 0.6 + Math.sin(now / 100) * 0.4;
-        ctx.strokeStyle = `rgba(${this.isRescue ? '255,234,0' : '0,255,102'}, ${pulse})`; ctx.lineWidth = 2 * STATE.sf;
+        ctx.strokeStyle = `rgba(${this.rgb}, ${pulse})`; ctx.lineWidth = 2 * STATE.sf;
         ctx.beginPath(); ctx.ellipse(0, 0, 24*sizeMod, 12*sizeMod, 0, 0, Math.PI*2); ctx.stroke();
         ctx.shadowBlur = 10 * STATE.sf; ctx.beginPath();
         ctx.moveTo(-18*sizeMod, 0); ctx.lineTo(-10*sizeMod, -8*sizeMod); ctx.lineTo(10*sizeMod, -8*sizeMod);
@@ -547,12 +546,13 @@ class BonusDrone {
         ctx.shadowBlur = 0; ctx.strokeStyle = this.color; ctx.lineWidth = 2 * STATE.sf;
         ctx.beginPath(); ctx.arc(0, 0, 16*sizeMod, now/200, Math.PI/2 + now/200); ctx.stroke();
         ctx.beginPath(); ctx.arc(0, 0, 16*sizeMod, Math.PI + now/200, Math.PI*1.5 + now/200); ctx.stroke();
-        ctx.fillStyle = `rgba(${this.isRescue ? '255,234,0' : '0,255,102'}, 0.15)`;
+        ctx.fillStyle = `rgba(${this.rgb}, 0.15)`;
         ctx.beginPath(); ctx.arc(0, 0, 12*sizeMod, 0, Math.PI*2); ctx.fill();
         
         ctx.shadowBlur = 15 * STATE.sf; ctx.shadowColor = this.color; ctx.fillStyle = '#fff'; 
         ctx.font = `800 ${Math.floor(18 * sizeMod)}px 'Oxanium'`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; 
         ctx.fillText(this.char.toUpperCase(), 0, 2*STATE.sf);
+        if (this.kind === 'arcade') { ctx.font = `800 ${Math.floor(10 * sizeMod)}px 'Oxanium'`; ctx.fillText('ARCADE', 0, -22 * sizeMod); }
         
         ctx.shadowBlur = 15 * STATE.sf; ctx.fillStyle = this.color;
         let trailPulse = Math.random() * 6 * sizeMod;
@@ -562,10 +562,18 @@ class BonusDrone {
     }
 }
 
+// Keys given back after the rescue words fire two lasers and score a little more (DUAL_BONUS). It lasts for the rest of the run.
+function markRescued(chars) {
+    chars.forEach(char => {
+        if (!STATE.activeKeys[char]) return;
+        STATE.activeKeys[char].isAbducted = false; STATE.activeKeys[char].isDual = true; STATE.dualChars[char] = true;
+    });
+}
+
 class Laser {
     constructor(x, y, targetEnemy, hitCombo, isDualOffset = 0) {
         this.x = x + isDualOffset; this.y = y; this.target = targetEnemy; this.hitCombo = hitCombo; 
-        this.speed = 45 * STATE.sf; this.active = true; this.color = (x < canvas.width/2) ? '#00f3ff' : '#ff0055';
+        this.dual = isDualOffset !== 0; this.speed = 45 * STATE.sf; this.active = true; this.color = (x < canvas.width/2) ? '#00f3ff' : '#ff0055';
     }
     update(dt) {
         if(!this.target.active) { this.active = false; return; }
@@ -575,7 +583,8 @@ class Laser {
             this.active = false; 
             if(this.target instanceof BonusDrone) {
                 this.target.active = false; createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.bonus();
-                if (this.target.isRescue && STATE.stolenKeys.length > 0) {
+                if (this.target.kind === 'arcade') { arcadeCollected(); }
+                else if (this.target.isRescue && STATE.stolenKeys.length > 0) {
                     let tk = STATE.stolenKeys.shift();
                     if(STATE.activeKeys[tk]) {
                         STATE.activeKeys[tk].isAbducted = false; STATE.activeKeys[tk].isDual = true; AudioFX.rescue();
@@ -607,10 +616,11 @@ class Laser {
                 }
             } else {
                 this.target.active = false; createExplosion(this.target.x, this.target.y, this.target.color); AudioFX.explode();
+                if (STATE.challenge) STATE.challengeHit = (STATE.challengeHit || 0) + 1;
             }
             
             let diffScoreMod = DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod;
-            STATE.score += Math.floor((100 + Math.min(this.hitCombo, CURVE.comboCap) * 10) * STATE.scoreMultiplier * diffScoreMod); 
+            STATE.score += Math.floor((100 + Math.min(this.hitCombo, CURVE.comboCap) * 10) * STATE.scoreMultiplier * diffScoreMod * (this.dual ? 1 + DUAL_BONUS : 1)); 
             addEmpCharge(5 + this.hitCombo); updateUI(); return;
         }
         this.x += (dx/dist) * this.speed * (dt/16); this.y += (dy/dist) * this.speed * (dt/16);
