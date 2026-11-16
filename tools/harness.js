@@ -21,7 +21,7 @@ function makeEnv(diff, store = {}) {
     id === 'hwSelect' ? { value: 'go60' } : id === 'layoutSelect' ? { value: 'qwerty' } :
     id === 'diffSelect' ? { value: diff } : id === 'chk-textassistant' ? { checked: true } : {}));
   const FakeDate = class extends Date { static now() { return clock; } };
-  const win = { location: { reload() { win.reloaded = true; } }, innerWidth: 1280, innerHeight: 800, addEventListener: (t, f) => { (listeners['w' + t] = listeners['w' + t] || []).push(f); }, AudioContext: function () { return mk(); } };
+  const win = { location: { reload() { win.reloaded = true; } }, innerWidth: 1280, AUTO_PERK: true, innerHeight: 800, addEventListener: (t, f) => { (listeners['w' + t] = listeners['w' + t] || []).push(f); }, AudioContext: function () { return mk(); } };
   const ctx = {
     console, Math, JSON, Object, Array, String, Number, Set, Map, Promise, Symbol, Proxy, Date: FakeDate,
     window: win, navigator: { clipboard: null },
@@ -35,7 +35,7 @@ function makeEnv(diff, store = {}) {
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   if (process.env.WORDS) store['galactic-dict-v1'] = fs.readFileSync(process.env.WORDS, 'utf8');
-  for (const f of ['js/config.js', 'js/entities.js', 'js/music.js', 'js/main.js']) vm.runInContext(read(f), ctx, { filename: f });
+  for (const f of ['js/config.js', 'js/entities.js', 'js/arcade.js', 'js/perks.js', 'js/music.js', 'js/main.js']) vm.runInContext(read(f), ctx, { filename: f });
   // the start screen restores the saved division on load; a fresh browser has none, so choose the requested one
   if (diff && !hadDiv) vm.runInContext(`setDivision(${JSON.stringify(diff)})`, ctx);
   vm.runInContext(`function botKey(acc) {
