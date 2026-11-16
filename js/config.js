@@ -305,6 +305,8 @@ function drawLastStand(ctx, time) {
 
 // A key rescued from a boss fires two lasers and scores this much more per letter (kept small on purpose: it must never be worth getting captured).
 const DUAL_BONUS = 0.10;
+// true while arcade mode is flying: the keyboard, the letters and the word display are hidden
+function arcadeOn() { return !!(STATE.arcade && STATE.arcade.on); }
 // ---- the difficulty curve: every number that makes the game harder over time lives here ----
 const CURVE = {
     // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.

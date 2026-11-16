@@ -369,7 +369,7 @@ class PracticeMissile {
         ctx.closePath();
         ctx.fillStyle = 'rgba(255, 234, 0, 0.2)'; ctx.fill(); ctx.stroke();
 
-        if(STATE.currentTarget && STATE.currentTarget.wordId === this.wordId && STATE.currentTarget.index === this.index) {
+        if(!arcadeOn() && STATE.currentTarget && STATE.currentTarget.wordId === this.wordId && STATE.currentTarget.index === this.index) {
             ctx.shadowColor = '#fff'; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1 * STATE.sf;
             ctx.beginPath(); ctx.arc(0, 0, 25 * sizeMod, 0, Math.PI*2); ctx.stroke();
         }
@@ -508,7 +508,7 @@ class SwarmEnemy {
         ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
         let fSize = Math.max(16, Math.floor(22 * STATE.sf));
         ctx.font = `800 ${fSize}px 'Oxanium'`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(this.char.toUpperCase(), 0, -35 * sizeMod);
+        if (!arcadeOn()) ctx.fillText(this.char.toUpperCase(), 0, -35 * sizeMod);
         
         ctx.restore();
     }

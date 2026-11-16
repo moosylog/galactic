@@ -408,15 +408,17 @@ function drawShipHUD(time) {
     
     let gridGrad = ctx.createLinearGradient(0, splitLine, 0, canvas.height);
     gridGrad.addColorStop(0, 'rgba(0, 243, 255, 0.05)'); gridGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gridGrad; ctx.fillRect(0, splitLine, canvas.width, canvas.height - splitLine);
+    if (!arcadeOn()) { ctx.fillStyle = gridGrad; ctx.fillRect(0, splitLine, canvas.width, canvas.height - splitLine); }
 
     const guide = new Set();
     if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) { const bc = STATE.bossRef.word[STATE.bossRef.typedIndex]; if (bc) guide.add(bc.toLowerCase()); }
     else if (STATE.currentTarget) { const gn = enemies.find(e => e.wordId === STATE.currentTarget.wordId && e.index === STATE.currentTarget.index && e.active && !e.targeted); if (gn) guide.add(gn.char); }
     else { const heads = wordHeads(); enemies.forEach(e => { if (!e.isBoss && e.index === heads[e.wordId] && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); }); }
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
-    ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
-    ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
+    if (!arcadeOn()) {
+        ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
+        ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
+    }
     const clock = waveClockFraction();
     if (clock !== null) {
         const bw = Math.min(canvas.width * 0.5, 360 * STATE.sf), bx = canvas.width - 12 * STATE.sf - bw, by = splitLine - 64 * STATE.sf;
@@ -428,7 +430,7 @@ function drawShipHUD(time) {
     ctx.restore();
     for (let char in STATE.activeKeys) {
         let k = STATE.activeKeys[char];
-        if(k.isAbducted || STATE.arcade.on) continue; 
+        if(k.isAbducted || arcadeOn()) continue; 
 
         let isBeingTargeted = false;
         for(let i=0; i<enemies.length; i++) { if(!enemies[i].isBoss && enemies[i].char === char && enemies[i].state === 'dive') { isBeingTargeted = true; break; } }
@@ -472,7 +474,7 @@ function drawShipHUD(time) {
     }
 
     if (STATE.currentTarget && enemies.some(e => e.wordId === STATE.currentTarget.wordId && !e.isBoss && !e.isPractice)) taOpacity = 1.0;
-    if (taOpacity > 0 && !STATE.hostages.active && !STATE.isHyperspace) {
+    if (taOpacity > 0 && !STATE.hostages.active && !STATE.isHyperspace && !arcadeOn()) {
         ctx.save();
         ctx.globalAlpha = taOpacity;
         let wordsMap = {};
@@ -866,7 +868,7 @@ function gameLoop(time) {
         if (fallingStar.lineSize <= 0 || fallingStar.y > canvas.height + 100) fallingStar = null;
     }
 
-    if (bonusDrones.length === 0 && !STATE.isHyperspace && Math.random() < 0.002) {
+    if (bonusDrones.length === 0 && !STATE.isHyperspace && !arcadeOn() && Math.random() < 0.002) {
         bonusDrones.push(new BonusDrone(false)); 
     }
     maybeSpawnArcadeDrone(dt);
