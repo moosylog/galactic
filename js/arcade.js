@@ -9,9 +9,12 @@ const ARCADE_OFFER_SECONDS = 8;   // how long you have to press SPACE after coll
 const ARCADE_KILL_POINTS = 100;   // per enemy, before the score multiplier and difficulty modifier
 const ARCADE_TOP_SPEED = 560;     // ship speed in pixels per second at scale 1
 const ARCADE_MARGIN = 48;         // the ship stays this far from the side edges
+const ARCADE_BONUS_EVERY = 8;      // every this many hits the timer gets a little longer
+const ARCADE_BONUS_MS = 1500;      // how much longer
+const ARCADE_BONUS_CAP_MS = 6000;  // at most this much extra time in one flight
 const ARCADE_ZONE_TOP = 0.58;     // the ship can fly up to this share of the screen height (from the top)
 
-function freshArcade() { return { on: false, offerLeft: 0, timeLeft: 0, keys: {}, shots: [], x: 0, y: 0, vx: 0, vy: 0, cool: 0, kills: 0, wave: 0, earned: 0, guarantee: false, age: 0, flash: 0, trail: [], trailT: 0 }; }
+function freshArcade() { return { on: false, offerLeft: 0, timeLeft: 0, keys: {}, shots: [], x: 0, y: 0, vx: 0, vy: 0, cool: 0, kills: 0, wave: 0, earned: 0, guarantee: false, age: 0, flash: 0, trail: [], trailT: 0, streak: 0, bonusMs: 0 }; }
 
 // bosses, rescues, snake waves and hyperspace do not mix with free flying
 function arcadeBlocked() { return !!(STATE.bossRef || (STATE.hostages && STATE.hostages.active) || STATE.snakeWave || STATE.isHyperspace); }
@@ -21,7 +24,10 @@ function maybeSpawnArcadeDrone(dt) {
     const A = STATE.arcade;
     if (!STATE.active || STATE.wave < 2 || A.on || A.offerLeft > 0 || A.wave === STATE.wave || arcadeBlocked()) return;
     if (bonusDrones.some(b => b.kind === 'arcade')) return;
-    if (A.guarantee || Math.random() < 0.0004 * (dt / 16)) { bonusDrones.push(new BonusDrone(false, 'arcade')); A.wave = STATE.wave; A.guarantee = false; }
+    if (A.guarantee || Math.random() < 0.0004 * (dt / 16)) {
+        bonusDrones.push(new BonusDrone(false, 'arcade')); A.wave = STATE.wave; A.guarantee = false;
+        AudioFX.arcade(); createPopText('ARCADE DRONE!  TYPE ITS LETTER', canvas.width / 2, canvas.height / 2 - 100 * STATE.sf, '#bc13fe');
+    }
 }
 
 function arcadeCollected() {
@@ -37,9 +43,10 @@ function startArcade() {
     if (A.on || A.offerLeft <= 0 || arcadeBlocked()) return false;
     const H = canvas.height, sf = STATE.sf;
     A.on = true; A.offerLeft = 0; A.timeLeft = ARCADE_SECONDS * 1000; A.kills = 0; A.earned = 0; A.cool = 0; A.shots = []; A.keys = {};
-    A.vx = 0; A.vy = 0; A.age = 0; A.flash = 0; A.trail = []; A.trailT = 0; bonusDrones = [];   // drones carry a letter, so none stay on screen
+    A.vx = 0; A.vy = 0; A.age = 0; A.flash = 0; A.trail = []; A.trailT = 0; A.streak = 0; A.bonusMs = 0; bonusDrones = [];   // drones carry a letter, so none stay on screen
     A.x = canvas.width / 2; A.y = H - 36 * sf;
     STATE.currentTarget = null;   // no half-typed word while the keyboard is gone
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}   // a focused button would eat Space
     AudioFX.arcade();
     createPopText('ARCADE MODE!  ARROWS + SPACE', canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#00f3ff');
     return true;
@@ -55,7 +62,11 @@ function endArcade(why) {
 function arcadeKey(e, down) {
     const A = STATE.arcade; if (!A) return false;
     const dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[e.key];
-    if (!down) { if (dir) A.keys[dir] = false; if (e.code === 'Space') A.keys.fire = false; return false; }
+    if (!down) {
+        if (dir) { A.keys[dir] = false; if (A.on && e.preventDefault) e.preventDefault(); }
+        if (e.code === 'Space') { A.keys.fire = false; if ((A.on || A.offerLeft > 0) && e.preventDefault) e.preventDefault(); }
+        return false;
+    }
     if (!STATE.active || STATE.paused) return false;
     if (A.on) {
         if (dir) { A.keys[dir] = true; e.preventDefault(); return true; }
@@ -65,6 +76,21 @@ function arcadeKey(e, down) {
     }
     if (e.code === 'Space' && A.offerLeft > 0) { e.preventDefault(); return startArcade(); }   // false when it cannot start (a boss is here)
     return false;
+}
+
+// one enemy destroyed: flat points with a +points pop-up, and every 8th hit in a row of the flight adds a little time (up to 6 s)
+function arcadeKill(e) {
+    const A = STATE.arcade, sf = STATE.sf, diffScoreMod = DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod;
+    e.active = false; createExplosion(e.x, e.y, e.color); AudioFX.explode();
+    const pts = Math.floor(ARCADE_KILL_POINTS * STATE.scoreMultiplier * diffScoreMod);
+    STATE.score += pts; A.earned += pts; A.kills++;
+    createPopText('+' + pts, e.x, e.y - 22 * sf, '#ffea00');
+    if (++A.streak >= ARCADE_BONUS_EVERY) {
+        A.streak = 0;
+        if (A.bonusMs < ARCADE_BONUS_CAP_MS) { A.timeLeft += ARCADE_BONUS_MS; A.bonusMs += ARCADE_BONUS_MS; createPopText('+' + (ARCADE_BONUS_MS / 1000) + 's', A.x, A.y - 64 * sf, '#00f3ff'); }
+    }
+    if (STATE.challenge) STATE.challengeHit = (STATE.challengeHit || 0) + 1;
+    updateUI();
 }
 
 // per frame: the offer countdown, the ship, the shots and the hits
@@ -93,17 +119,13 @@ function arcadeUpdate(dt) {
         A.cool = 150; A.flash = 70; AudioFX.laser(A.x / W);
     }
 
-    const diffScoreMod = DATA.DIFFICULTY[STATE.difficulty || 'contender'].scoreMod, r = 28 * sf;
+    const r = 28 * sf;
     for (const s of A.shots) {
         s.y -= 1100 * sf * dt / 1000; if (s.y < -20 * sf) { s.active = false; continue; }
         for (const e of enemies) {
             if (!e.active || e.targeted || e.isBoss || e.isPractice || e.state === 'ufo' || e.state === 'snake') continue;
             if (Math.abs(e.x - s.x) < r && Math.abs(e.y - s.y) < r) {
-                e.active = false; s.active = false; createExplosion(e.x, e.y, e.color); AudioFX.explode();
-                const pts = Math.floor(ARCADE_KILL_POINTS * STATE.scoreMultiplier * diffScoreMod);
-                STATE.score += pts; A.earned += pts; A.kills++;
-                if (STATE.challenge) STATE.challengeHit = (STATE.challengeHit || 0) + 1;
-                updateUI(); break;
+                s.active = false; arcadeKill(e); break;
             }
         }
     }
@@ -171,7 +193,7 @@ function drawArcade(ctx) {
         if (Math.floor(Date.now() / 300) % 2 === 0) ctx.fillText('ARCADE MODE READY: PRESS SPACE (' + Math.ceil(A.offerLeft / 1000) + ')', W / 2, 74 * sf);
     }
     if (A.on) {
-        const bw = 260 * sf, bx = W / 2 - bw / 2, by = 52 * sf, f = Math.max(0, A.timeLeft / (ARCADE_SECONDS * 1000));
+        const bw = 260 * sf, bx = W / 2 - bw / 2, by = 52 * sf, f = Math.max(0, Math.min(1, A.timeLeft / (ARCADE_SECONDS * 1000)));
         ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(bx, by, bw, 6 * sf);
         ctx.fillStyle = f > 0.3 ? '#00f3ff' : '#ff0055'; ctx.fillRect(bx, by, bw * f, 6 * sf);
         ctx.fillStyle = '#fff'; ctx.shadowBlur = 8 * sf; ctx.shadowColor = '#00f3ff';

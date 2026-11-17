@@ -2,6 +2,8 @@
 // Perks: after every sector clear (during the hyperspace jump) you pick 1 of 3 small upgrades that last for the rest of the run.
 // Press 1, 2 or 3, or click a card. In a daily run the offers depend only on the date and the sector, so they never disturb the shared word sequence.
 
+const PerkSettings = { on: true };   // Setup, Display: turn the perk picks off
+
 function freshPerks() { return { counts: {}, list: [], diveMul: 1, empMul: 1, clockMul: 1, steady: false, aegis: false }; }
 
 function dualCandidates() { return Object.keys(STATE.activeKeys).filter(k => /^[a-z]$/.test(k) && !STATE.activeKeys[k].isDual && !STATE.activeKeys[k].isAbducted); }
@@ -45,18 +47,19 @@ function perkScreen() { return document.getElementById('perk-screen'); }
 
 function openPerkPicker(done) {
     if (STATE.perk.aegis) STATE.shield = true;   // AEGIS: a fresh shield for the new sector
+    if (!PerkSettings.on) { done(); return; }
     const offers = perkOffers();
     if (!offers.length) { done(); return; }
     STATE.perkOpen = { offers, done };
     if (typeof window !== 'undefined' && window.AUTO_PERK) { choosePerk(0); return; }   // test and simulation hook: take the first offer
     const el = perkScreen(), cards = document.getElementById('perk-cards'), title = document.getElementById('perk-title');
-    if (title) title.textContent = 'SECTOR ' + (STATE.sector - 1) + ' CLEARED: CHOOSE A PERK';
+    if (title) title.textContent = 'SECTOR ' + (STATE.sector - 1) + ' CLEARED!';
     if (cards) {
         cards.textContent = '';
         offers.forEach((p, i) => {
             const b = document.createElement('button'), n = document.createElement('div'), d = document.createElement('div');
             b.className = 'btn-action perk-card'; n.className = 'perk-name'; d.className = 'perk-desc';
-            n.textContent = (i + 1) + '  ' + p.name; d.textContent = p.desc;
+            const kc = document.createElement('span'), nm = document.createElement('span'); kc.className = 'perk-key'; kc.textContent = String(i + 1); nm.textContent = p.name; n.appendChild(kc); n.appendChild(nm); d.textContent = p.desc;
             b.onclick = () => choosePerk(i); b.appendChild(n); b.appendChild(d); cards.appendChild(b);
         });
     }

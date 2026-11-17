@@ -131,6 +131,9 @@ function resetSettings() {
     const k = byId('kbSelect'); if (k) k.value = 'compact';
     const fx = byId('chk-menufx'); if (fx) fx.checked = true; setMenuFx(true);
     const mc = byId('chk-music'); if (mc) mc.checked = true; setMusic(true);
+    const pc = byId('chk-perks'); if (pc) pc.checked = true; setPerks(true);
+    const rc = byId('chk-reduce'); if (rc) rc.checked = osPrefersReducedMotion(); setReduceMotion(osPrefersReducedMotion());
+    const cb = byId('chk-cb'); if (cb) cb.checked = false; setColorblind(false);
     saveGameData(); refreshChip(); drawKbPreview();
 }
 function clearWordCache() {
@@ -150,7 +153,8 @@ function toggleAdvanced() {
 }
 
 function createPopText(text, x, y, color = '#ffea00') { popTexts.push({text, x, y, life: 1.0, color}); }
-function createExplosion(x, y, color) { for(let i=0; i<25; i++) particles.push(new Particle(x, y, color)); }
+function createExplosion(x, y, color) { const n = Access.reduceMotion ? 8 : 25; for(let i=0; i<n; i++) particles.push(new Particle(x, y, color)); }
+function shakeBody(ms) { if (Access.reduceMotion) return; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), ms); }
 
 function addEmpCharge(amount) {
     if(STATE.emp >= 100) return;
@@ -390,7 +394,7 @@ function buildHUD() {
         let px = offsetX + (k.x * u) + (u/2); let py = offsetY + (k.y * u) + (u/2);
 
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
-            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false };
+            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false, left: k.x < maxX/2 };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
             tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
@@ -435,7 +439,7 @@ function drawShipHUD(time) {
         let isBeingTargeted = false;
         for(let i=0; i<enemies.length; i++) { if(!enemies[i].isBoss && enemies[i].char === char && enemies[i].state === 'dive') { isBeingTargeted = true; break; } }
         
-        ctx.strokeStyle = k.color; ctx.shadowBlur = 10 * STATE.sf; ctx.shadowColor = k.color;
+        const kc = Access.colorblind ? handColor(k.left) : k.color; ctx.strokeStyle = kc; ctx.shadowBlur = 10 * STATE.sf; ctx.shadowColor = kc;
         
         let keyGrad = ctx.createLinearGradient(k.x, k.y - k.h/2, k.x, k.y + k.h/2);
         if(k.isDual) {
@@ -766,7 +770,7 @@ function updateUI() {
 }
 
 function damagePlayer(amt) {
-    STATE.hull -= amt; STATE.combo = 0; document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 300);
+    STATE.hull -= amt; STATE.combo = 0; shakeBody(300);
     AudioFX.error(); updateUI();
     if(STATE.hull <= 0) { 
         STATE.active = false; setControls(false); Music.stop();
@@ -1135,7 +1139,7 @@ document.addEventListener('keydown', (e) => {
             createPopText("WEAPON JAMMED!", canvas.width/2, canvas.height/2 + (50*STATE.sf), '#ff0055');
             document.body.classList.add('emp-flash'); setTimeout(()=> document.body.classList.remove('emp-flash'), 200);
         } else {
-            document.body.classList.add('shake'); setTimeout(() => document.body.classList.remove('shake'), 200);
+            shakeBody(200);
         }
 
         AudioFX.error(); STATE.combo = typoCombo(STATE.combo); 
@@ -1366,6 +1370,10 @@ function menuMusicGesture(e) {
     if (!menuMusicShown()) return;
     menuMusicArmed = false; soundHint(false); MenuMusic.start();
 }
+function setReduceMotion(on) { Access.reduceMotion = !!on; savePrefs({ reduceMotion: !!on }); }
+function setColorblind(on) { Access.colorblind = !!on; savePrefs({ colorblind: !!on }); }
+function osPrefersReducedMotion() { try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
+function setPerks(on) { PerkSettings.on = !!on; savePrefs({ perks: !!on }); }
 function setMusic(on) {
     Music.on = !!on; savePrefs({ music: !!on });
     if (!on) { Music.stop(); MenuMusic.stop(); menuMusicArmed = false; soundHint(false); }
@@ -1404,6 +1412,9 @@ function initMenu() {
     const p = prefs(); menuFxOn = p.menuFx !== false;
     const fx = byId('chk-menufx'); if (fx) fx.checked = menuFxOn;
     Music.on = p.music !== false; const mc = byId('chk-music'); if (mc) mc.checked = Music.on;
+    PerkSettings.on = p.perks !== false; const pc = byId('chk-perks'); if (pc) pc.checked = PerkSettings.on;
+    Access.reduceMotion = p.reduceMotion !== undefined ? !!p.reduceMotion : osPrefersReducedMotion(); const rc = byId('chk-reduce'); if (rc) rc.checked = Access.reduceMotion;   // follows your system setting until you choose
+    Access.colorblind = !!p.colorblind; const cb = byId('chk-cb'); if (cb) cb.checked = Access.colorblind;
     setDivision(DIV_NAMES[p.div] ? p.div : 'contender');
     showScreen(p.seenHowTo ? 'title' : 'howto');
     startMenuFx();

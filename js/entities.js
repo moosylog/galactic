@@ -402,7 +402,7 @@ class SwarmEnemy {
         this.formY = ((STATE.challenge ? 90 + slot * 55 : 110 + slot * 70) + shape) * STATE.sf;
         
         this.active = true; this.targeted = false; 
-        this.color = (this.targetNode.color === 'var(--neon-blue)') ? '#00f3ff' : '#ff0055';
+        this.color = handColor(this.targetNode.color === 'var(--neon-blue)');
     }
 
     update(dt, time) {
@@ -573,7 +573,7 @@ function markRescued(chars) {
 class Laser {
     constructor(x, y, targetEnemy, hitCombo, isDualOffset = 0) {
         this.x = x + isDualOffset; this.y = y; this.target = targetEnemy; this.hitCombo = hitCombo; 
-        this.dual = isDualOffset !== 0; this.speed = 45 * STATE.sf; this.active = true; this.color = (x < canvas.width/2) ? '#00f3ff' : '#ff0055';
+        this.dual = isDualOffset !== 0; this.speed = 45 * STATE.sf; this.active = true; this.color = handColor(x < canvas.width/2);
     }
     update(dt) {
         if(!this.target.active) { this.active = false; return; }

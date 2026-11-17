@@ -305,6 +305,10 @@ function drawLastStand(ctx, time) {
 
 // A key rescued from a boss fires two lasers and scores this much more per letter (kept small on purpose: it must never be worth getting captured).
 const DUAL_BONUS = 0.10;
+// Accessibility switches (Setup, Display). Hand colours: cyan for the left hand and pink for the right, or blue and orange for colour-blind players.
+const Access = { colorblind: false, reduceMotion: false };
+const HAND_PALETTES = { normal: { left: '#00f3ff', right: '#ff0055' }, colorblind: { left: '#4aa8ff', right: '#ffb000' } };
+function handColor(left) { const p = HAND_PALETTES[Access.colorblind ? 'colorblind' : 'normal']; return left ? p.left : p.right; }
 // true while arcade mode is flying: the keyboard, the letters and the word display are hidden
 function arcadeOn() { return !!(STATE.arcade && STATE.arcade.on); }
 // ---- the difficulty curve: every number that makes the game harder over time lives here ----
