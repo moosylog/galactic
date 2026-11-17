@@ -152,7 +152,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 
 **Sector badges and pace.** Just under the status bar, the top-right shows your sector and a badge for every sector you have cleared: a cyan chevron for each, a purple star for every 5, and a gold diamond for every 10. On the top-left, **PACE** compares your score at the start of each wave with your best run's score at the start of the same wave, for example *PACE +1,240 VS BEST* in green when you are ahead and red when you are behind. It appears from wave 2 once you have a best run saved with this feature (runs saved by older versions have no pace data until you set a new best), and it is not shown in daily runs.
 
-**Perks (after every sector).** When a sector is cleared and the hyperspace jump ends, you choose **1 of 3 perks** for the rest of the run. Press **1**, **2** or **3**, or tap a card. The next sector starts once you have chosen. The end screen lists the perks you took.
+**Perks (after every sector).** A sector is 5 waves, ending with a boss. When you beat the boss, the game stops for a moment and shows 3 upgrade cards, a bit like choosing a power-up in a roguelike. This is not a level you play: you pick **one** card (press its number key **1**, **2** or **3**, or tap it), it gives you a small boost for the rest of the run, and then the next sector starts. If you do not want this screen, untick **Upgrade picks** in Setup. The end screen lists the upgrades you took.
 - **REPAIR:** restore 30% health (only offered when you are hurt).
 - **AEGIS:** a shield now and a fresh one at the start of every sector.
 - **SLOW DIVES:** diving letters fall 15% slower (twice at most).
@@ -163,7 +163,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 - **ARCADE LINK:** an arcade drone is guaranteed on the next wave that can have one.
 In a daily run the offers depend only on the date and the sector, so everyone sees the same choices and the shared word sequence is not affected.
 
-**Arcade mode (optional, time-limited).** Now and then a purple **ARCADE** drone flies across (at most one per wave, from wave 2; never during bosses, rescues or Centipede waves). Type its letter to shoot it, then press **Space** within 8 seconds to launch, or ignore it and nothing changes. For **15 seconds** the screen becomes a plain shooter: the keyboard, the letters on the enemies and the word display all disappear, and you fly a swept-wing fighter that banks as it moves. **Left and right arrows** fly it, **up and down arrows** take it up into the lower part of the screen (as far as 58% of the screen height), and **Space** fires **double plasma shots**. Hold Space to keep firing. Every enemy you hit scores 100 points (times your score multiplier). It does not change your combo, accuracy or WPM, **Enter** still fires the EMP, and enemies you hit leave their words as if they had fallen. No bonus drones appear while you fly. The mode ends early if a boss or a Centipede wave arrives. Letters that reach the danger line still cost health.
+**Arcade mode (optional, time-limited).** Now and then a purple **ARCADE** drone flies across (at most one per wave, from wave 2; never during bosses, rescues or Centipede waves). Type its letter to shoot it, then press **Space** within 8 seconds to launch, or ignore it and nothing changes. For **15 seconds** the screen becomes a plain shooter: the keyboard, the letters on the enemies and the word display all disappear, and you fly a swept-wing fighter that banks as it moves. **Left and right arrows** fly it, **up and down arrows** take it up into the lower part of the screen (as far as 58% of the screen height), and **Space** fires **double plasma shots**. Hold Space to keep firing. Every enemy you hit scores 100 points (times your score multiplier). It does not change your combo, accuracy or WPM, **Enter** still fires the EMP, and enemies you hit leave their words as if they had fallen. No bonus drones appear while you fly. Each hit shows its points, and **every 8th hit adds 1.5 seconds** to the timer (up to 6 extra seconds in one flight). When an ARCADE drone appears, a short sound and a message tell you to type its letter. The mode ends early if a boss or a Centipede wave arrives. Letters that reach the danger line still cost health.
 
 **Challenge Stage tally.** When a Challenge Stage ends, a message shows how many letters you hit out of the total, for example *CHALLENGE STAGE: 7/8 HIT*, with *PERFECT!* if you got them all. A perfect wave (no wrong key) now plays a short rising jingle.
 
@@ -214,6 +214,10 @@ On every level on **Apex** words get one letter longer every 8 waves (up to two 
 ---
 
 ## Settings
+
+**Accessibility (Setup, Display tab; remembered between visits).**
+- **Reduced motion:** no screen shake, and explosions use fewer sparks. Until you choose, it follows your system's "reduce motion" setting.
+- **Colour-blind friendly:** enemies, lasers and keys use **blue** (left hand) and **orange** (right hand) instead of cyan and pink.
 
 All settings are in **Setup** on the start screen. **They cannot be changed mid-run.** Your division is chosen on the title screen.
 

@@ -137,6 +137,9 @@
                         </div>
                         <div>
                             <label>Music</label>
+                            <label class="check-row"><input type="checkbox" id="chk-reduce" onchange="setReduceMotion(this.checked)"> Reduced motion: no screen shake and fewer sparks</label>
+                            <label class="check-row"><input type="checkbox" id="chk-cb" onchange="setColorblind(this.checked)"> Colour-blind friendly: blue and orange instead of cyan and pink</label>
+                            <label class="check-row"><input type="checkbox" id="chk-perks" checked onchange="setPerks(this.checked)"> Upgrade picks: choose 1 of 3 upgrades after each sector</label>
                             <label class="check-row"><input type="checkbox" id="chk-music" checked onchange="setMusic(this.checked)"> Music: a tune on the start screen, and a loop that builds with your combo</label>
                         </div>
                     </div>
@@ -163,6 +166,7 @@
                     <div class="howto-card"><b>1 &middot; PICK A WORD</b><span>Words sit in one row above the keyboard. Type the first letter of any word to lock on.</span></div>
                     <div class="howto-card"><b>2 &middot; TYPE IT IN ORDER</b><span>Finish the word letter by letter. A wrong key breaks your combo but keeps your word.</span></div>
                     <div class="howto-card"><b>3 &middot; PROTECT YOUR HEALTH</b><span>Letters that reach the line cost health. Clear every word for the next wave. Esc pauses.</span></div>
+                    <div class="howto-card"><b>BONUS &middot; ARCADE MODE</b><span>Shoot the purple ARCADE drone by typing its letter, then press Space. For 15 seconds the keyboard disappears and you fly: arrows move, Space fires.</span></div>
                 </div>
                 <p class="data-note">White glow on the keyboard = next key. Yellow dot = a key you are training.</p>
                 <button class="btn-action" onclick="finishHowTo()">GOT IT</button>
@@ -210,8 +214,9 @@
     </div>
     <div id="perk-screen" class="overlay-screen" style="display:none">
         <div class="menu-box" style="text-align:center">
-            <h1 id="perk-title">CHOOSE A PERK</h1>
-            <p style="color:#8fa3b8;font-family:'Share Tech Mono',monospace">Press 1, 2 or 3, or tap a card. It lasts for the rest of the run.</p>
+            <h1 id="perk-title">SECTOR CLEARED!</h1>
+            <p style="color:#cfe8ff;font-family:'Share Tech Mono',monospace;margin-bottom:4px">Pick ONE upgrade. It helps you until this run ends.</p>
+            <p style="color:#8fa3b8;font-family:'Share Tech Mono',monospace;font-size:0.85rem">Press the number key (1, 2 or 3) or tap a card. You can turn this screen off in Setup.</p>
             <div id="perk-cards" class="perk-cards"></div>
         </div>
     </div>
