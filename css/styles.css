@@ -287,3 +287,4 @@ select:hover, select:focus, textarea:focus { border-color: var(--neon-pink); box
 .perk-card .perk-name { font-weight: 800; letter-spacing: 2px; margin-bottom: 6px; }
 .perk-card .perk-desc { font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; letter-spacing: 0; text-transform: none; opacity: 0.85; }
 @media (max-width: 700px) { .hud-hi { display: none; } }
+.perk-card .perk-key { display: inline-block; min-width: 1.7em; padding: 0 5px; margin-right: 10px; text-align: center; border: 1px solid currentColor; border-radius: 4px; opacity: 0.9; }
