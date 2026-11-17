@@ -415,7 +415,7 @@ function drawShipHUD(time) {
     if (!arcadeOn()) { ctx.fillStyle = gridGrad; ctx.fillRect(0, splitLine, canvas.width, canvas.height - splitLine); }
 
     const guide = new Set();
-    if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle' && STATE.bossRef.word) { const bc = STATE.bossRef.word[STATE.bossRef.typedIndex]; if (bc) guide.add(bc.toLowerCase()); }
+    if (STATE.bossRef && STATE.bossRef.active && (STATE.bossRef.state === 'idle' || STATE.bossRef.state === 'enter') && STATE.bossRef.word) { const bc = STATE.bossRef.word[STATE.bossRef.typedIndex]; if (bc) guide.add(bc.toLowerCase()); }
     else if (STATE.currentTarget) { const gn = enemies.find(e => e.wordId === STATE.currentTarget.wordId && e.index === STATE.currentTarget.index && e.active && !e.targeted); if (gn) guide.add(gn.char); }
     else { const heads = wordHeads(); enemies.forEach(e => { if (!e.isBoss && e.index === heads[e.wordId] && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); }); }
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
@@ -1057,7 +1057,7 @@ document.addEventListener('keydown', (e) => {
     let targetEnemy = null; let seqMatched = false; let startsWord = false;
     let hitDrone = bonusDrones.find(b => b.char === inputChar && b.active && !b.targeted);
     
-    if (STATE.bossRef && STATE.bossRef.active && STATE.bossRef.state === 'idle') {
+    if (STATE.bossRef && STATE.bossRef.active && (STATE.bossRef.state === 'idle' || STATE.bossRef.state === 'enter')) {
         let bossChar = STATE.bossRef.word[STATE.bossRef.typedIndex];
         if (bossChar && inputChar === bossChar.toLowerCase()) {
             targetEnemy = STATE.bossRef; seqMatched = true;
