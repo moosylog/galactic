@@ -66,7 +66,10 @@ function makeEnv(diff, store = {}) {
     timers = timers.filter(t => { if (t.at <= clock) { t.f(); return false; } return true; });
     const cb = raf; raf = null; if (cb) cb(clock);
   };
-  return { ctx, step, press, now: () => clock, run: f => vm.runInContext(f, ctx), store };
+  const evt = ev => Object.assign({ repeat: false, preventDefault() { this.prevented = true; }, ctrlKey: false, target: {} }, ev);
+  const pressEvent = ev => { const e = evt(ev); (listeners.keydown || []).forEach(f => f(e)); return e; };     // a keydown with any key/code/repeat
+  const releaseEvent = ev => { const e = evt(ev); (listeners.keyup || []).forEach(f => f(e)); return e; };     // a keyup
+  return { ctx, step, press, pressEvent, releaseEvent, now: () => clock, run: f => vm.runInContext(f, ctx), store };
 }
 
 
