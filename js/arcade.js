@@ -4,7 +4,7 @@
 // display all disappear, and you fly a ship with the arrow keys (left and right, and up into the lower part of the screen), firing double
 // shots with SPACE. Every enemy you hit scores flat points. Combo, accuracy and WPM are left alone, and Enter still fires the EMP.
 // It is never offered (and it ends) during bosses, rescues and snake waves.
-const ARCADE_SECONDS = 15;        // how long the mode lasts
+const ARCADE_SECONDS = 30;        // how long the mode lasts
 const ARCADE_OFFER_SECONDS = 8;   // how long you have to press SPACE after collecting the drone
 const ARCADE_KILL_POINTS = 100;   // per enemy, before the score multiplier and difficulty modifier
 const ARCADE_TOP_SPEED = 560;     // ship speed in pixels per second at scale 1
