@@ -14,7 +14,7 @@ const ARCADE_BONUS_MS = 1500;      // how much longer
 const ARCADE_BONUS_CAP_MS = 6000;  // at most this much extra time in one flight
 const ARCADE_ZONE_TOP = 0.58;     // the ship can fly up to this share of the screen height (from the top)
 
-function freshArcade() { return { on: false, offerLeft: 0, timeLeft: 0, keys: {}, shots: [], x: 0, y: 0, vx: 0, vy: 0, cool: 0, kills: 0, wave: 0, earned: 0, guarantee: false, age: 0, flash: 0, trail: [], trailT: 0, streak: 0, bonusMs: 0 }; }
+function freshArcade() { return { on: false, offerLeft: 0, timeLeft: 0, keys: {}, fireQueued: false, shots: [], x: 0, y: 0, vx: 0, vy: 0, cool: 0, kills: 0, wave: 0, earned: 0, guarantee: false, age: 0, flash: 0, trail: [], trailT: 0, streak: 0, bonusMs: 0 }; }
 
 // bosses, rescues, snake waves and hyperspace do not mix with free flying
 function arcadeBlocked() { return !!(STATE.bossRef || (STATE.hostages && STATE.hostages.active) || STATE.snakeWave || STATE.isHyperspace); }
@@ -42,7 +42,7 @@ function startArcade() {
     const A = STATE.arcade;
     if (A.on || A.offerLeft <= 0 || arcadeBlocked()) return false;
     const H = canvas.height, sf = STATE.sf;
-    A.on = true; A.offerLeft = 0; A.timeLeft = ARCADE_SECONDS * 1000; A.kills = 0; A.earned = 0; A.cool = 0; A.shots = []; A.keys = {};
+    A.on = true; A.offerLeft = 0; A.timeLeft = ARCADE_SECONDS * 1000; A.kills = 0; A.earned = 0; A.cool = 0; A.shots = []; A.keys = {}; A.fireQueued = false;
     A.vx = 0; A.vy = 0; A.age = 0; A.flash = 0; A.trail = []; A.trailT = 0; A.streak = 0; A.bonusMs = 0; bonusDrones = [];   // drones carry a letter, so none stay on screen
     A.x = canvas.width / 2; A.y = H - 36 * sf;
     STATE.currentTarget = null;   // no half-typed word while the keyboard is gone
@@ -54,7 +54,7 @@ function startArcade() {
 
 function endArcade(why) {
     const A = STATE.arcade; if (!A.on) return;
-    A.on = false; A.keys = {}; A.shots = [];
+    A.on = false; A.keys = {}; A.shots = []; A.fireQueued = false;
     createPopText((why || 'ARCADE OVER') + (A.kills ? '  ' + A.kills + ' HIT' + (A.kills > 1 ? 'S' : '') + '  +' + A.earned : ''), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#00f3ff');
 }
 
@@ -70,7 +70,7 @@ function arcadeKey(e, down) {
     if (!STATE.active || STATE.paused) return false;
     if (A.on) {
         if (dir) { A.keys[dir] = true; e.preventDefault(); return true; }
-        if (e.code === 'Space') { A.keys.fire = true; e.preventDefault(); return true; }
+        if (e.code === 'Space') { A.keys.fire = true; A.fireQueued = true; e.preventDefault(); return true; }
         if (e.key === 'Enter') return false;   // the EMP still works
         return true;                           // the keyboard is removed: letters do nothing
     }
@@ -114,7 +114,8 @@ function arcadeUpdate(dt) {
     A.trail = A.trail.filter(p => p.life > 0).slice(-70);
 
     A.cool -= dt;
-    if (A.keys.fire && A.cool <= 0 && A.shots.length < 12) {   // a double shot from the two cannons
+    if ((A.keys.fire || A.fireQueued) && A.cool <= 0 && A.shots.length < 12) {
+        A.fireQueued = false;   // a double shot from the two cannons
         A.shots.push({ x: A.x - 18 * sf, y: A.y - 34 * sf, active: true }, { x: A.x + 18 * sf, y: A.y - 34 * sf, active: true });
         A.cool = 150; A.flash = 70; AudioFX.laser(A.x / W);
     }
