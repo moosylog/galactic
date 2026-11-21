@@ -1,15 +1,18 @@
 /* © 2026 Moosy Research. All rights reserved. */
-// Arcade mode: an optional bonus fight made of two full shoot-'em-up levels.
+// Arcade mode: an optional bonus fight made of four shoot-'em-up levels.
 //
 // How it starts: shoot the purple ARCADE drone (type its letter). The game freezes and asks "ARCADE MODE  Y or N".
 //   N (or nothing you can do about it later): the drone is gone and the typing game carries on exactly where it was.
 //   Y: the keyboard, the letters and the word display disappear and you fly a ship (arrows or WASD, Space fires, Enter = EMP smart bomb).
 //
 // The typing game is FROZEN the whole time (its wave clock and WPM clock are paused, see gameLoop in main.js), so nothing can hurt your run while you play.
-// The price of the gamble: every ship you lose costs a little health (never below 1%). The reward: points, and a heal plus EMP charge if you clear both levels.
+// The price of the gamble: every ship you lose costs a little health (never below 1%). The reward: points, and a heal plus EMP charge if you clear all four levels.
 //
 //   LEVEL 1  SWARM ASSAULT  Enemies swoop in on curved paths and settle into a swaying formation. Then they break off, loop and dive at you
 //                           and drop bombs. Commanders take two hits, bring escorts and fire aimed bolts. Killing a diver scores double.
+//   LEVEL 3  CHALLENGE STAGE Waves of harmless enemies fly loops with no bombs. Hit them all for a perfect bonus.
+//   LEVEL 4  TRACTOR BOSS   A boss with a capture beam. If it grabs your ship, TYPE THE WORD on screen to break free (the word is built around one of your weak pairs).
+//   Enemies drop power-ups: 3 = triple shot, S = shield, Z = time warp.
 //   LEVEL 2  CRAWLER STRIKE A long crawler snakes down through a field of mushrooms. Every segment you shoot turns into a mushroom and splits the snake.
 //                           A spider scuttles through your zone and saucers fly over dropping bombs.
 const ARC = {
@@ -18,16 +21,18 @@ const ARC = {
     TOP_SPEED: 560, MARGIN: 48, ZONE_TOP: 0.58,   // ship speed (px/s at scale 1), side margin, and how high up the ship may fly (share of the screen height)
     FIRE_COOL: 150, MAX_SHOTS: 12, SHOT_SPEED: 1100,
     CLEAR_BONUS: 1000, PERFECT_BONUS: 1500,       // per level (the clear bonus is multiplied by the level number); perfect = no ship lost in that level
-    FINISH_HEAL: 20, FINISH_EMP: 50,              // reward for clearing both levels: health % and EMP charge %
+    FINISH_HEAL: 20, FINISH_EMP: 50,              // reward for clearing all four levels: health % and EMP charge %
     PTS: { bee: 80, fly: 120, cmd: 250, seg: 50, head: 150, spider: 300, saucer: 200, shroom: 5 },   // before the score multiplier and the difficulty modifier
     DIVE_BONUS: 2,                // a swarm enemy shot while it dives scores this many times its normal points
-    LEVELS: 2, NAMES: ['SWARM ASSAULT', 'CRAWLER STRIKE'],
+    LEVELS: 4, NAMES: ['SWARM ASSAULT', 'CRAWLER STRIKE', 'CHALLENGE STAGE', 'TRACTOR BOSS'],
+    CHALLENGE_PERFECT: 5000,       // level 3: hit every single enemy
+    PW_TRIPLE_MS: 10000, PW_SLOW_MS: 7000,   // power-up lengths (the shield lasts until it absorbs a hit)
     // how hard each division is: bomb rate, dive/spider rate, speed
     // Academy is the gentle one: slow, few bombs, no aimed bolts, a smaller swarm and a shorter snake, 5 ships, and a lost ship costs only 5% health.
     DIFF: {
-        academy: { bomb: 0.4, dive: 0.45, speed: 0.75, lives: 5, hull: 5, aimed: false, rows: 3, segs: 8, shrooms: 10 },
-        contender: { bomb: 1, dive: 1, speed: 1, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16 },
-        apex: { bomb: 1.45, dive: 1.4, speed: 1.15, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16 }
+        academy: { bomb: 0.4, dive: 0.45, speed: 0.75, lives: 5, hull: 5, aimed: false, rows: 3, segs: 8, shrooms: 10, drop: 0.14, chalN: 6, bossHp: 20, capMs: 9000, beamCd: 14000, fanMs: 3400, esc: 1 },
+        contender: { bomb: 1, dive: 1, speed: 1, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16, drop: 0.08, chalN: 8, bossHp: 32, capMs: 6500, beamCd: 9000, fanMs: 2200, esc: 2 },
+        apex: { bomb: 1.45, dive: 1.4, speed: 1.15, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16, drop: 0.06, chalN: 8, bossHp: 44, capMs: 5200, beamCd: 7500, fanMs: 1800, esc: 2 }
     }
 };
 
@@ -36,7 +41,8 @@ function freshArcade() {
         shots: [], foes: [], bombs: [], shrooms: [], form: { sway: 0, breath: 1 }, total: 0,
         x: 0, y: 0, vx: 0, vy: 0, cool: 0, lives: 0, dead: 0, invuln: 0, hurt: 0, totalHurt: 0, kills: 0, earned: 0,
         guarantee: false, wave: 0, age: 0, flash: 0, trail: [], trailT: 0,
-        bombT: 0, diveT: 0, spiderT: 0, saucerT: 0, wraps: 0, complete: false, pendingSpawn: false };
+        bombT: 0, diveT: 0, spiderT: 0, saucerT: 0, wraps: 0, complete: false, pendingSpawn: false,
+        caps: [], pw: { triple: 0, shield: false, slow: 0 }, cap: null, chalHit: 0, clearTitle: '', clearSub: '', clearSub2: '' };
 }
 
 // true while arcade owns the screen: the question is open or the flight is on. The typing game is frozen then.
@@ -92,7 +98,7 @@ function answerArcade(yes) {
 function startArcade() {
     const A = STATE.arcade, F = arcF();
     A.on = true; A.asking = false; A.keys = {}; A.fireQueued = false; A.shots = []; A.bombs = []; A.foes = []; A.shrooms = [];
-    A.lives = A.maxLives = arcDiff().lives; A.kills = 0; A.earned = 0; A.totalHurt = 0; A.complete = false;
+    A.lives = A.maxLives = arcDiff().lives; A.caps = []; A.pw = { triple: 0, shield: false, slow: 0 }; A.cap = null; A.kills = 0; A.earned = 0; A.totalHurt = 0; A.complete = false;
     A.vx = 0; A.vy = 0; A.age = 0; A.flash = 0; A.trail = []; A.trailT = 0; A.dead = 0; A.invuln = 0; A.cool = 0;
     A.x = F.W / 2; A.y = F.yMax;
     bonusDrones = [];                // drones carry a letter, so none stay on screen
@@ -131,6 +137,11 @@ function arcadeKey(e, down) {
         return true;
     }
     if (!A.on) return false;
+    if (A.cap) {   // held by the tractor beam: the keyboard is back, type the word
+        e.preventDefault();
+        if (!e.repeat && /^[a-zA-Z]$/.test(e.key)) arcCapKey(e.key.toLowerCase());
+        return true;
+    }
     if (dir) { A.keys[dir] = true; e.preventDefault(); return true; }
     if (e.code === 'Space') { A.keys.fire = true; A.fireQueued = true; e.preventDefault(); return true; }
     if (e.key === 'Enter') { e.preventDefault(); if (!e.repeat) arcadeEmp(); return true; }   // the EMP charge works as a smart bomb in here
@@ -140,7 +151,7 @@ function arcadeKey(e, down) {
 // EMP in arcade: wipes every bomb and hits every enemy on screen once
 function arcadeEmp() {
     const A = STATE.arcade;
-    if (A.phase !== 'play' || A.dead > 0 || STATE.emp < 100) return;
+    if (A.phase !== 'play' || A.dead > 0 || A.cap || STATE.emp < 100) return;
     STATE.emp = 0; UI.empContainer.classList.remove('emp-ready'); UI.empFill.style.width = '0%';
     document.body.classList.add('emp-flash'); setTimeout(() => document.body.classList.remove('emp-flash'), 800);
     createPopText('EMP!', canvas.width / 2, canvas.height / 2, '#bc13fe'); AudioFX.explode();
@@ -159,18 +170,26 @@ function beginLevel() {
     const A = STATE.arcade, D = arcDiff();
     A.phase = 'play'; A.pt = 0; A.lt = 0; A.hurt = 0; A.foes = []; A.bombs = []; A.shrooms = [];
     A.bombT = 1500; A.diveT = 0; A.spiderT = 6000; A.saucerT = 10000; A.wraps = 0;
-    if (A.level === 1) buildSwarm(); else buildCrawler();
+    A.caps = []; A.pw = { triple: 0, shield: false, slow: 0 }; A.cap = null; A.chalHit = 0;
+    if (A.level === 1) buildSwarm(); else if (A.level === 2) buildCrawler(); else if (A.level === 3) buildChallenge(); else buildBoss();
     A.total = A.foes.filter(e => e.core).length;
     void D;
 }
 
 function levelClear() {
     const A = STATE.arcade;
-    for (const e of A.foes) if (e.hp > 0 && !e.core) { createExplosion(e.x, e.y, e.color); e.hp = 0; }   // spiders and saucers leave with the level
-    A.foes = []; A.bombs = [];
-    const perfect = A.hurt === 0, bonus = arcPoints(ARC.CLEAR_BONUS * A.level), extra = perfect ? arcPoints(ARC.PERFECT_BONUS) : 0;
+    for (const e of A.foes) if (e.hp > 0 && !e.core) { createExplosion(e.x, e.y, e.color); e.hp = 0; }   // spiders, saucers and escorts leave with the level
+    A.foes = []; A.bombs = []; A.caps = []; A.cap = null;
+    let bonus = 0, extra = 0;
+    if (A.level === 3) {   // challenge stage: the hits already scored; a perfect round pays extra
+        const perfect = A.chalHit >= A.total; extra = perfect ? arcPoints(ARC.CHALLENGE_PERFECT) : 0;
+        A.clearTitle = 'CHALLENGE STAGE'; A.clearSub = 'HIT ' + A.chalHit + '/' + A.total; A.clearSub2 = perfect ? 'PERFECT!  +' + extra : 'HIT THEM ALL FOR A PERFECT BONUS';
+    } else {
+        const perfect = A.hurt === 0; bonus = arcPoints(ARC.CLEAR_BONUS * A.level); extra = perfect ? arcPoints(ARC.PERFECT_BONUS) : 0;
+        A.clearTitle = 'LEVEL ' + A.level + ' CLEAR'; A.clearSub = '+' + bonus + (perfect ? '   PERFECT +' + extra : ''); A.clearSub2 = A.level < ARC.LEVELS ? 'GET READY' : '';
+    }
     STATE.score += bonus + extra; A.earned += bonus + extra; updateUI();
-    A.phase = 'clear'; A.pt = 0; A.clearBonus = bonus; A.clearPerfect = perfect ? extra : 0;
+    A.phase = 'clear'; A.pt = 0;
     AudioFX.perfect();
 }
 
@@ -181,8 +200,19 @@ function finishArcade(complete) {
 }
 
 function hurtShip() {
+    const A = STATE.arcade;
+    if (A.phase !== 'play' || A.dead > 0 || A.invuln > 0 || A.cap) return;
+    if (A.pw.shield) {   // the shield soaks up one hit
+        A.pw.shield = false; A.invuln = 1200; createExplosion(A.x, A.y, '#00f3ff'); AudioFX.explode(); shakeBody(120);
+        createPopText('SHIELD DOWN', A.x, A.y - 50 * STATE.sf, '#00f3ff'); return;
+    }
+    loseShip();
+}
+
+// the ship is gone: a life, some health, and a new one after a moment
+function loseShip() {
     const A = STATE.arcade, sf = STATE.sf;
-    if (A.phase !== 'play' || A.dead > 0 || A.invuln > 0) return;
+    A.cap = null; A.pw.triple = 0; A.pw.slow = 0;
     A.lives--; A.hurt++; A.totalHurt++;
     createExplosion(A.x, A.y, '#00f3ff'); createExplosion(A.x, A.y, '#ff2f6d'); AudioFX.explode(); AudioFX.error(); shakeBody(260);
     STATE.hull = Math.max(1, STATE.hull - arcDiff().hull); updateUI();
@@ -198,8 +228,9 @@ function respawnShip() {
 
 // ---------- scoring ----------
 // one hit on an enemy; at zero hit points it is destroyed
-function arcHit(e) {
-    e.hp--; e.hitT = 120;
+function arcHit(e, dmg) {
+    if (e.type === 'boss') { arcHitBoss(e, dmg || 1); return; }
+    e.hp -= 1; e.hitT = 120;
     if (e.hp > 0) { if (e.type === 'cmd') e.color = '#4aa8ff'; arcSfx(500, 250, 0.08, 'square', 0.06); return; }
     const A = STATE.arcade, sf = STATE.sf;
     let base = e.type === 'seg' ? (e.head ? ARC.PTS.head : ARC.PTS.seg) : ARC.PTS[e.type];
@@ -210,6 +241,9 @@ function arcHit(e) {
     createExplosion(e.x, e.y, e.color); AudioFX.explode();
     createPopText('+' + pts + (diving ? ' DIVE!' : ''), e.x, e.y - 22 * sf, diving ? '#00f3ff' : '#ffea00');
     if (e.type === 'seg') arcMushroomAt(e);
+    if (A.level === 3) A.chalHit++;
+    else if (e.type === 'cmd' || e.type === 'saucer') arcDrop(e.x, e.y, true);
+    else arcDrop(e.x, e.y, false);
     updateUI();
 }
 function arcKillQuiet(e) { e.hp = 0; createExplosion(e.x, e.y, e.color); AudioFX.explode(); }   // rammed the ship: no points
@@ -421,8 +455,8 @@ function bombsUpdate(dt) {
 function arcShots(dt) {
     const A = STATE.arcade, F = arcF(), sf = F.sf, G = A.on && A.level === 2 && A.phase === 'play' ? crawlerGeom() : null;
     for (const s of A.shots) {
-        s.py = s.y; s.y -= ARC.SHOT_SPEED * sf * dt / 1000;
-        if (s.y < -20 * sf) { s.active = false; continue; }
+        s.py = s.y; s.y -= ARC.SHOT_SPEED * sf * dt / 1000; if (s.vx) s.x += s.vx * dt / 1000;
+        if (s.y < -20 * sf || s.x < -20 || s.x > F.W + 20) { s.active = false; continue; }
         if (A.phase !== 'play') continue;
         let best = null, bestY = -1e9;   // the thing the shot meets first, going up: the lowest one on screen
         if (G) for (const m of A.shrooms) {
@@ -431,11 +465,12 @@ function arcShots(dt) {
         }
         for (const e of A.foes) {
             if (e.hp <= 0 || e.state === 'wait' || e.gone) continue;
-            if (Math.abs(e.x - s.x) < e.r && s.y <= e.y + e.r && s.py >= e.y - e.r && e.y > bestY) { best = { foe: e }; bestY = e.y; }
+            const rx = e.type === 'boss' ? e.r * 1.5 : e.r;
+            if (Math.abs(e.x - s.x) < rx && s.y <= e.y + e.r && s.py >= e.y - e.r && e.y > bestY) { best = { foe: e }; bestY = e.y; }
         }
         if (!best) continue;
         s.active = false;
-        if (best.foe) arcHit(best.foe);
+        if (best.foe) { if (best.foe.immune) arcSfx(300, 200, 0.05, 'square', 0.04); else arcHit(best.foe); }
         else {
             const m = best.shroom; m.hp--; arcSfx(700, 400, 0.05, 'square', 0.04);
             if (m.hp <= 0) { A.shrooms.splice(A.shrooms.indexOf(m), 1); const pts = arcPoints(ARC.PTS.shroom); STATE.score += pts; A.earned += pts; updateUI(); }
@@ -446,11 +481,11 @@ function arcShots(dt) {
 
 function arcContacts() {
     const A = STATE.arcade, sf = STATE.sf, hr = 13 * sf;
-    if (A.dead > 0 || A.invuln > 0) return;
+    if (A.dead > 0 || A.invuln > 0 || A.cap) return;
     for (const b of A.bombs) if (Math.hypot(b.x - A.x, b.y - A.y) < b.r + hr) { b.dead = true; hurtShip(); return; }
     for (const e of A.foes) {
-        if (e.hp <= 0 || e.state === 'wait' || e.gone) continue;
-        if (Math.hypot(e.x - A.x, e.y - A.y) < e.r * 0.75 + hr) { if (e.core && e.type !== 'seg') arcKillQuiet(e); hurtShip(); return; }
+        if (e.hp <= 0 || e.state === 'wait' || e.gone || e.harmless || e.type === 'boss') continue;
+        if (Math.hypot(e.x - A.x, e.y - A.y) < e.r * 0.75 + hr) { if ((e.core && e.type !== 'seg') || e.state === 'esc') arcKillQuiet(e); hurtShip(); return; }
     }
 }
 
@@ -458,6 +493,8 @@ function arcContacts() {
 function moveShip(dt) {
     const A = STATE.arcade, F = arcF(), sf = F.sf;
     A.flash = Math.max(0, A.flash - dt); A.invuln = Math.max(0, A.invuln - dt);
+    A.pw.triple = Math.max(0, A.pw.triple - dt); A.pw.slow = Math.max(0, A.pw.slow - dt);
+    if (A.cap) { A.vx = A.vy = 0; A.age += dt; return; }   // held in the beam: capUpdate moves the ship
     if (A.dead > 0) { A.dead -= dt; if (A.dead <= 0 && A.lives > 0) respawnShip(); return; }
     // the ship flies in the lower part of the screen, with a little inertia so it banks and glides
     const yMin = F.H * ARC.ZONE_TOP, top = ARC.TOP_SPEED * sf, k = Math.min(1, dt / 70);
@@ -471,9 +508,10 @@ function moveShip(dt) {
     for (const p of A.trail) { p.life -= dt; p.y += 110 * sf * dt / 1000; }
     A.trail = A.trail.filter(p => p.life > 0).slice(-70);
     A.cool -= dt;
-    if ((A.keys.fire || A.fireQueued) && A.cool <= 0 && A.shots.length < ARC.MAX_SHOTS && A.phase !== 'done' && A.phase !== 'over') {
+    if ((A.keys.fire || A.fireQueued) && A.cool <= 0 && A.shots.length < ARC.MAX_SHOTS + (A.pw.triple > 0 ? 8 : 0) && A.phase !== 'done' && A.phase !== 'over') {
         A.fireQueued = false;   // a double shot from the two cannons
         A.shots.push({ x: A.x - 18 * sf, y: A.y - 34 * sf, py: A.y - 34 * sf, active: true }, { x: A.x + 18 * sf, y: A.y - 34 * sf, py: A.y - 34 * sf, active: true });
+        if (A.pw.triple > 0) for (const sx of [-1, 1]) A.shots.push({ x: A.x + sx * 26 * sf, y: A.y - 30 * sf, py: A.y - 30 * sf, vx: sx * 0.2 * ARC.SHOT_SPEED * sf, active: true });
         A.cool = ARC.FIRE_COOL; A.flash = 70; AudioFX.laser(A.x / F.W);
     }
 }
@@ -490,8 +528,9 @@ function arcadeUpdate(dt) {
     if (A.phase === 'intro') { if (A.pt >= 2000) beginLevel(); }
     else if (A.phase === 'play') {
         A.lt += dt;
-        if (A.level === 1) swarmUpdate(dt); else crawlerUpdate(dt);
-        bombsUpdate(dt); arcContacts();
+        const edt = A.pw.slow > 0 ? dt * 0.5 : dt;   // time warp slows the enemies and their bombs, not you
+        if (A.level === 1) swarmUpdate(edt); else if (A.level === 2) crawlerUpdate(edt); else if (A.level === 3) challengeUpdate(edt); else bossUpdate(edt);
+        bombsUpdate(edt); arcPickups(dt); if (A.cap) capUpdate(dt); arcContacts();
     }
     arcShots(dt);
     if (A.phase === 'play') {
@@ -655,10 +694,10 @@ function drawArcadeAsk(ctx, A, W, H, sf) {
     ctx.fillStyle = '#bc13fe'; ctx.font = `800 ${Math.floor(16 * sf)}px 'Oxanium'`; ctx.fillText('ARCADE DRONE SHOT DOWN', W / 2, py + 34 * sf);
     ctx.fillStyle = '#fff'; ctx.shadowBlur = 14 * sf; ctx.shadowColor = '#bc13fe'; ctx.font = `800 ${Math.floor(44 * sf)}px 'Oxanium'`; ctx.fillText('ARCADE MODE   Y or N', W / 2, py + 84 * sf); ctx.shadowBlur = 0;
     ctx.fillStyle = '#cfe8ff'; ctx.font = `700 ${Math.floor(15 * sf)}px 'Share Tech Mono', monospace`;
-    ctx.fillText('Two shoot-out levels. The enemies move, dive and drop bombs.', W / 2, py + 130 * sf);
+    ctx.fillText('Four levels: swarm, crawler, bonus stage, boss. Enemies move and drop bombs.', W / 2, py + 130 * sf);
     ctx.fillText('Arrow keys = MOVE,  Space = SHOOT.  Typing is paused while you fly.', W / 2, py + 154 * sf);
     ctx.fillText('Lose a ship: -' + arcDiff().hull + '% health (never below 1%).', W / 2, py + 178 * sf);
-    ctx.fillText('Clear both levels: +' + ARC.FINISH_HEAL + '% health and +' + ARC.FINISH_EMP + '% EMP.', W / 2, py + 202 * sf);
+    ctx.fillText('Clear all 4 levels: +' + ARC.FINISH_HEAL + '% health and +' + ARC.FINISH_EMP + '% EMP.', W / 2, py + 202 * sf);
     ctx.globalAlpha = ready ? 1 : 0.35;
     const kw = 190 * sf, kh = 58 * sf, ky = py + 244 * sf, pulse = ready ? 0.7 + 0.3 * Math.sin(t / 220) : 0.5;
     [['Y', 'FLY', W / 2 - kw - 14 * sf, '0,255,102'], ['N', 'SKIP', W / 2 + 14 * sf, '255,0,85']].forEach(([k, label, kx, rgb]) => {
@@ -671,8 +710,8 @@ function drawArcadeAsk(ctx, A, W, H, sf) {
 
 function drawArcadeBanner(ctx, A, W, H, sf) {
     let title = '', sub = '', sub2 = '', k = 1;
-    if (A.phase === 'intro') { title = 'LEVEL ' + A.level; sub = ARC.NAMES[A.level - 1]; sub2 = ''; k = Math.min(1, A.pt / 300, (2000 - A.pt) / 400); }
-    else if (A.phase === 'clear') { title = 'LEVEL ' + A.level + ' CLEAR'; sub = '+' + A.clearBonus + (A.clearPerfect ? '   PERFECT +' + A.clearPerfect : ''); sub2 = A.level < ARC.LEVELS ? 'GET READY' : ''; k = Math.min(1, A.pt / 250, (2600 - A.pt) / 400); }
+    if (A.phase === 'intro') { title = 'LEVEL ' + A.level; sub = ARC.NAMES[A.level - 1]; sub2 = ['CATCH THE CAPSULES:  3 = TRIPLE SHOT   S = SHIELD   Z = TIME WARP', 'SHOOT THE SEGMENTS - EACH ONE BECOMES A MUSHROOM', 'NO BOMBS HERE - HIT EVERY ONE FOR A PERFECT BONUS', 'DODGE THE BEAM.  CAUGHT? TYPE THE WORD.  BEAM = DOUBLE DAMAGE'][A.level - 1]; k = Math.min(1, A.pt / 300, (2000 - A.pt) / 400); }
+    else if (A.phase === 'clear') { title = A.clearTitle; sub = A.clearSub; sub2 = A.clearSub2; k = Math.min(1, A.pt / 250, (2600 - A.pt) / 400); }
     else if (A.phase === 'done') { title = 'ARCADE COMPLETE'; sub = A.kills + ' HITS   +' + A.earned; sub2 = '+' + ARC.FINISH_HEAL + '% HEALTH   +' + ARC.FINISH_EMP + '% EMP'; k = Math.min(1, A.pt / 250, (3000 - A.pt) / 400); }
     else if (A.phase === 'over') { title = 'OUT OF SHIPS'; sub = A.kills + ' HITS   +' + A.earned; k = Math.min(1, A.pt / 250, (2400 - A.pt) / 400); }
     else return;
@@ -688,7 +727,7 @@ function drawArcadeControls(ctx, A, W, H, sf) {
     const big = A.phase === 'intro', y = big ? H * 0.36 + 100 * sf : H - 14 * sf;
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (big) { ctx.globalAlpha = Math.max(0, Math.min(1, A.pt / 300, (2000 - A.pt) / 400)); ctx.fillStyle = '#00f3ff'; ctx.shadowBlur = 12 * sf; ctx.shadowColor = '#00f3ff'; ctx.font = `800 ${Math.floor(26 * sf)}px 'Oxanium'`; ctx.fillText('ARROW KEYS = MOVE        SPACE = SHOOT', W / 2, y); ctx.shadowBlur = 0; ctx.fillStyle = '#cfe8ff'; ctx.font = `700 ${Math.floor(14 * sf)}px 'Share Tech Mono', monospace`; ctx.fillText('(WASD works too)   Enter = EMP bomb when your EMP bar is full', W / 2, y + 30 * sf); }
-    else { ctx.fillStyle = 'rgba(207,232,255,0.7)'; ctx.font = `700 ${Math.floor(14 * sf)}px 'Share Tech Mono', monospace`; ctx.fillText('ARROW KEYS = MOVE     SPACE = SHOOT', W / 2, y); }
+    else { ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(207,232,255,0.7)'; ctx.font = `700 ${Math.floor(14 * sf)}px 'Share Tech Mono', monospace`; ctx.fillText('ARROW KEYS = MOVE     SPACE = SHOOT', W - 20 * sf, y); }
     ctx.restore();
 }
 
@@ -701,7 +740,9 @@ function drawArcadeHud(ctx, A, W, sf) {
         const x = W / 2 - 132 * sf + i * 22 * sf, y = 96 * sf, on = i < A.lives;
         ctx.fillStyle = on ? '#00f3ff' : 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.moveTo(x, y - 8 * sf); ctx.lineTo(x + 8 * sf, y + 7 * sf); ctx.lineTo(x, y + 3 * sf); ctx.lineTo(x - 8 * sf, y + 7 * sf); ctx.closePath(); ctx.fill();
     }
-    ctx.textAlign = 'left'; ctx.fillStyle = '#ffea00'; ctx.font = `800 ${Math.floor(15 * sf)}px 'Oxanium'`; ctx.fillText('HITS ' + A.kills + '   +' + A.earned, W / 2 - 52 * sf, 96 * sf);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffea00'; ctx.font = `800 ${Math.floor(15 * sf)}px 'Oxanium'`; ctx.fillText((A.level === 3 ? 'HIT ' + A.chalHit + '/' + A.total : 'HITS ' + A.kills) + '   +' + A.earned, W / 2 - 52 * sf, 96 * sf);
+    const bs = A.level === 4 && A.phase === 'play' ? A.foes.find(e => e.type === 'boss' && e.hp > 0) : null;
+    if (bs) { const bw = 380 * sf, k = Math.max(0, bs.hp / bs.maxHp); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(W / 2 - bw / 2, 110 * sf, bw, 9 * sf); ctx.fillStyle = bs.rage ? '#ff3b3b' : '#ff3df2'; ctx.fillRect(W / 2 - bw / 2, 110 * sf, bw * k, 9 * sf); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1; ctx.strokeRect(W / 2 - bw / 2, 110 * sf, bw, 9 * sf); }
     ctx.restore();
 }
 
@@ -711,8 +752,12 @@ function drawArcade(ctx) {
     if (!A.on) return;
     ctx.save();
     if (A.level === 2 && A.phase === 'play') { const G = crawlerGeom(); for (const m of A.shrooms) drawShroom(ctx, m, G, sf); }
+    const boss = A.level === 4 ? A.foes.find(e => e.type === 'boss' && e.hp > 0) : null;
+    if (boss) drawBeam(ctx, boss, A, arcF(), sf, t);
+    for (const c of A.caps) drawCapsule(ctx, c, sf, t);
     for (const e of A.foes) {
-        if (e.hp <= 0 || e.state === 'wait') continue;
+        if (e.hp <= 0 || e.state === 'wait' || (e.started === false)) continue;
+        if (e.type === 'boss') { drawBoss(ctx, e, sf, t); continue; }
         if (e.type === 'seg') { drawSeg(ctx, e, t); continue; }
         if (e.type === 'spider') { drawSpider(ctx, e, t); continue; }
         if (e.type === 'saucer') { drawSaucer(ctx, e, t); continue; }
@@ -729,9 +774,245 @@ function drawArcade(ctx) {
         const g = ctx.createLinearGradient(0, s.y - 14 * sf, 0, s.y + 28 * sf);
         g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, '#ffea00'); g.addColorStop(1, 'rgba(255,110,0,0)');
         ctx.fillStyle = g; ctx.shadowBlur = 14 * sf; ctx.shadowColor = '#ffea00';
-        ctx.beginPath(); ctx.roundRect(s.x - 2.5 * sf, s.y - 14 * sf, 5 * sf, 42 * sf, 2.5 * sf); ctx.fill();
+        ctx.save(); ctx.translate(s.x, s.y); if (s.vx) ctx.rotate(Math.atan2(s.vx, ARC.SHOT_SPEED * sf));
+        ctx.beginPath(); ctx.roundRect(-2.5 * sf, -14 * sf, 5 * sf, 42 * sf, 2.5 * sf); ctx.fill(); ctx.restore();
     }
     if (A.dead <= 0 && !(A.invuln > 0 && Math.floor(t / 90) % 2)) drawArcadeShip(ctx, A, sf);   // blinks while it is safe after a respawn
+    if (A.dead <= 0 && A.cap) { ctx.save(); ctx.strokeStyle = '#ff3df2'; ctx.lineWidth = 3 * sf; ctx.shadowBlur = 14 * sf; ctx.shadowColor = '#ff3df2'; ctx.beginPath(); ctx.arc(A.x, A.y, (50 + 4 * Math.sin(t / 60)) * sf, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
+    if (A.dead <= 0 && A.pw.shield) drawShieldBubble(ctx, A, sf, t);
     ctx.restore();
+    drawPowerStatus(ctx, A, W, H, sf, t); if (A.cap) drawCapturePrompt(ctx, A, W, H, sf);
     drawArcadeHud(ctx, A, W, sf); drawArcadeBanner(ctx, A, W, H, sf); drawArcadeControls(ctx, A, W, H, sf);
+}
+
+
+// ================= POWER-UPS =================
+// Capsules drop from commanders and saucers (always) and from other enemies (sometimes). Fly into one to take it. Each level starts without any.
+const ARC_PW = { triple: { c: '#ffea00', l: '3', name: 'TRIPLE SHOT' }, shield: { c: '#00f3ff', l: 'S', name: 'SHIELD' }, slow: { c: '#bc13fe', l: 'Z', name: 'TIME WARP' } };
+function arcDrop(x, y, force) {
+    const A = STATE.arcade, sf = STATE.sf;
+    if (A.caps.length >= 2 || (!force && Math.random() > arcDiff().drop)) return;
+    const kinds = Object.keys(ARC_PW); A.caps.push({ x, y, kind: kinds[Math.floor(Math.random() * kinds.length)], vy: 120 * sf, age: 0 });
+}
+function arcPickups(dt) {
+    const A = STATE.arcade, F = arcF(), sf = F.sf;
+    for (const c of A.caps) {
+        c.age += dt; c.y += c.vy * dt / 1000;
+        if (c.y > F.H + 30) c.dead = true;
+        else if (A.dead <= 0 && !A.cap && Math.hypot(c.x - A.x, c.y - A.y) < 40 * sf) {
+            c.dead = true; const p = ARC_PW[c.kind];
+            if (c.kind === 'triple') A.pw.triple = ARC.PW_TRIPLE_MS; else if (c.kind === 'slow') A.pw.slow = ARC.PW_SLOW_MS; else A.pw.shield = true;
+            createPopText(p.name + '!', A.x, A.y - 60 * sf, p.c); arcSfx(500, 1400, 0.25, 'triangle', 0.09);
+        }
+    }
+    A.caps = A.caps.filter(c => !c.dead);
+}
+
+// ================= LEVEL 3: CHALLENGE STAGE =================
+// Waves fly cubic-bezier loops across the screen (screen fractions; every wave is one of three shapes, some mirrored). Nothing shoots, nothing hurts.
+const ARC_SHAPES = {
+    A: [[-0.08, 0.10], [0.30, 0.00], [0.70, 0.30], [0.55, 0.45], [0.40, 0.60], [0.15, 0.45], [0.30, 0.30], [0.45, 0.15], [0.95, 0.50], [1.08, 0.85]],
+    B: [[0.20, -0.08], [0.20, 0.35], [0.80, 0.15], [0.80, 0.45], [0.80, 0.70], [0.20, 0.35], [0.20, 0.62], [0.20, 0.85], [0.70, 0.90], [0.55, 1.08]],
+    C: [[0.50, -0.08], [0.50, 0.50], [0.95, 0.50], [0.80, 0.25], [0.65, 0.00], [0.30, 0.00], [0.20, 0.25], [0.10, 0.50], [0.50, 0.55], [0.50, 1.08]]
+};
+function chainPos(pts, mirror, p, F) {
+    const n = (pts.length - 1) / 3, s = Math.min(n - 1, Math.floor(p * n)), t = Math.min(1, p * n - s), i = s * 3, u = 1 - t;
+    const k = (c) => u * u * u * pts[i][c] + 3 * u * u * t * pts[i + 1][c] + 3 * u * t * t * pts[i + 2][c] + t * t * t * pts[i + 3][c];
+    const fx = k(0), fy = k(1); return { x: (mirror ? 1 - fx : fx) * F.W, y: fy * F.H };
+}
+function buildChallenge() {
+    const A = STATE.arcade, D = arcDiff(), sf = STATE.sf;
+    const waves = [['A', false], ['A', true], ['B', false], ['B', true], ['C', false]];
+    waves.forEach(([shape, mirror], wi) => { for (let k = 0; k < D.chalN; k++) {
+        const kind = wi % 2 ? 'fly' : 'bee';
+        A.foes.push({ type: kind, core: true, harmless: true, hp: 1, state: 'chal', shape, mirror, delay: 900 + wi * 3200 + k * 260, p: 0, dur: 6800 / D.speed,
+            x: -999, y: -999, ang: Math.PI / 2, seed: Math.random() * 6.28, hitT: 0, hold: 0, r: (kind === 'fly' ? 19 : 17) * sf, color: kind === 'fly' ? '#ff3d9a' : '#ffea00', started: false });
+    } });
+}
+function challengeUpdate(dt) {
+    const A = STATE.arcade, F = arcF();
+    for (const e of A.foes) {
+        if (e.hitT > 0) e.hitT -= dt;
+        if (!e.started) { if (A.lt < e.delay) continue; e.started = true; }
+        const ox = e.x, oy = e.y; e.p += dt / e.dur;
+        if (e.p >= 1) { e.gone = true; continue; }   // it got away: no points, no penalty
+        const q = chainPos(ARC_SHAPES[e.shape], e.mirror, e.p, F); e.x = q.x; e.y = q.y;
+        if (ox > -900 && Math.hypot(e.x - ox, e.y - oy) > 0.2) e.ang = Math.atan2(e.y - oy, e.x - ox);
+    }
+}
+
+// ================= LEVEL 4: TRACTOR BOSS =================
+function buildBoss() {
+    const A = STATE.arcade, F = arcF(), D = arcDiff(), sf = F.sf;
+    A.foes.push({ type: 'boss', core: true, hp: D.bossHp, maxHp: D.bossHp, state: 'boss', mode: 'enter', t: 0, sway: 0, x: F.W / 2, y: -90 * sf, r: 46 * sf, color: '#ff3df2',
+        hitT: 0, hold: 0, seed: 1.3, fanT: 2600, esT: 6000, beamT: D.beamCd * 0.55, rage: false, immune: true, ang: Math.PI / 2 });
+}
+function arcBombV(x, y, vx, vy, kind) {
+    const A = STATE.arcade, sf = STATE.sf; if (A.bombs.length >= 12) return;
+    A.bombs.push({ x, y, vx, vy, kind, r: (kind === 'bolt' ? 5 : 7) * sf, age: 0, ph: Math.random() * 6.28 });
+}
+function bossUpdate(dt) {
+    const A = STATE.arcade, F = arcF(), D = arcDiff(), sf = F.sf, b = A.foes.find(e => e.type === 'boss' && e.hp > 0);
+    // escorts: small bees that home in on the ship
+    for (const e of A.foes) if (e.state === 'esc') {
+        if (e.hitT > 0) e.hitT -= dt;
+        const want = Math.atan2(A.y - e.y, A.x - e.x), turn = 1.7 * dt / 1000, d = arcAngDiff(e.ang, want);
+        e.ang += Math.max(-turn, Math.min(turn, d)); e.x += Math.cos(e.ang) * e.spd * dt / 1000; e.y += Math.sin(e.ang) * e.spd * dt / 1000;
+        if (e.y > F.H + 50 * sf || e.x < -80 * sf || e.x > F.W + 80 * sf || e.y < -120 * sf) e.gone = true;
+    }
+    if (!b) return;
+    if (b.hitT > 0) b.hitT -= dt;
+    b.t += dt;
+    if (!b.rage && b.hp <= b.maxHp * 0.5) { b.rage = true; b.color = '#ff3b3b'; createPopText('BOSS ENRAGED!', F.W / 2, F.H * 0.45, '#ff3b3b'); arcDrop(b.x, b.y + 50 * sf, true); AudioFX.error(); }
+    const spd = b.rage ? 1.35 : 1, baseY = 190 * sf;
+    if (b.mode === 'enter') {
+        const k = Math.min(1, b.t / 1800); b.y = -90 * sf + (baseY + 90 * sf) * (1 - (1 - k) * (1 - k));
+        if (b.t >= 1800) { b.mode = 'fight'; b.immune = false; b.t = 0; }
+    } else if (b.mode === 'fight') {
+        b.sway += dt; b.x = F.W / 2 + Math.sin(b.sway / (1500 / spd)) * F.W * 0.30; b.y = baseY + Math.sin(b.sway / 900) * 14 * sf;
+        b.fanT -= dt; b.esT -= dt; b.beamT -= dt;
+        if (b.fanT <= 0) {   // a fan of three
+            b.fanT = D.fanMs / spd; const ox = b.x, oy = b.y + 44 * sf;
+            if (D.aimed) { const base = Math.atan2(Math.max(100 * sf, A.y - oy), A.x - ox), sp = 300 * sf * D.speed; for (let k = -1; k <= 1; k++) arcBombV(ox, oy, Math.cos(base + k * 0.3) * sp, Math.sin(base + k * 0.3) * sp, 'bolt'); }
+            else for (let k = -1; k <= 1; k++) arcBombV(ox + k * 30 * sf, oy, k * 55 * sf, 200 * sf * D.speed, 'bomb');
+            arcSfx(300, 120, 0.3, 'sawtooth', 0.06);
+        }
+        if (b.esT <= 0) {
+            b.esT = (b.rage ? 4200 : 6500) / D.dive;
+            for (let k = 0; k < D.esc; k++) A.foes.push({ type: 'bee', core: false, hp: 1, state: 'esc', x: b.x + (k ? 1 : -1) * 34 * sf, y: b.y + 30 * sf, ang: Math.PI / 2, r: 17 * sf, color: '#ffea00', seed: Math.random() * 6.28, hitT: 0, hold: 0, spd: 230 * sf * D.speed });
+        }
+        if (b.beamT <= 0) { b.mode = 'charge'; b.t = 0; arcSfx(200, 900, 1.0, 'sawtooth', 0.05); createPopText('TRACTOR BEAM!', F.W / 2, F.H * 0.33, '#bc13fe'); }
+    } else if (b.mode === 'charge') {
+        if (b.t >= 1100) { b.mode = 'beam'; b.t = 0; arcSfx(120, 80, 2.2, 'sawtooth', 0.07); }
+    } else if (b.mode === 'beam') {
+        if (A.dead <= 0 && !A.cap && A.invuln <= 0 && Math.abs(A.x - b.x) < arcBeamHalf(b, A.y, sf)) startCapture(b);
+        else if (b.t >= 2400) { b.mode = 'fight'; b.beamT = D.beamCd / (b.rage ? 1.4 : 1); }
+    } else if (b.mode === 'stun') {
+        if (b.t >= 1200) { b.mode = 'fight'; b.t = 0; }
+    }
+}
+function arcBeamHalf(b, y, sf) { return 34 * sf + Math.max(0, y - b.y) * 0.24; }
+
+function arcHitBoss(b, dmg) {
+    const A = STATE.arcade, sf = STATE.sf;
+    if (b.mode === 'beam' || b.mode === 'hold') dmg *= 2;   // the beam exposes its core
+    b.hp -= dmg; b.hitT = 100; arcSfx(180, 90, 0.08, 'square', 0.06);
+    if (b.hp > 0) return;
+    const pts = arcPoints(2000); STATE.score += pts; A.earned += pts; A.kills++; b.hp = 0;
+    for (let i = 0; i < 6; i++) createExplosion(b.x + (Math.random() - 0.5) * 90 * sf, b.y + (Math.random() - 0.5) * 50 * sf, i % 2 ? '#ff3df2' : '#ffea00');
+    AudioFX.explode(); shakeBody(500); createPopText('BOSS DOWN!  +' + pts, b.x, b.y - 60 * sf, '#ffea00'); updateUI();
+}
+
+// ---- the capture ----
+function startCapture(b) {
+    const A = STATE.arcade, D = arcDiff();
+    let w = 'the'; try { w = String(getWordForWave(STATE.wave, STATE.difficulty !== 'academy')).toLowerCase(); } catch (e) {}
+    if (!/^[a-z]{3,8}$/.test(w)) w = 'the';
+    A.cap = { word: w, i: 0, t: 0, tmax: D.capMs, sx: A.x, sy: A.y, flash: 0 };
+    A.keys = {}; A.vx = A.vy = 0; b.mode = 'hold'; b.t = 0;
+    createPopText('CAPTURED!  TYPE THE WORD', canvas.width / 2, canvas.height * 0.33, '#ff3df2'); arcSfx(900, 100, 0.6, 'sawtooth', 0.08);
+}
+function capUpdate(dt) {
+    const A = STATE.arcade, F = arcF(), c = A.cap, b = A.foes.find(e => e.type === 'boss' && e.hp > 0);
+    if (!b) { A.cap = null; return; }
+    c.t += dt; c.flash = Math.max(0, c.flash - dt);
+    const u = Math.min(1, c.t / c.tmax);   // the beam drags the ship up toward the boss
+    A.x = c.sx + (b.x - c.sx) * 0.7 * u; A.y = c.sy + ((b.y + 150 * F.sf) - c.sy) * 0.85 * u;
+    if (c.t >= c.tmax) {   // too slow: the ship is lost
+        A.cap = null; b.mode = 'fight'; b.t = 0; b.beamT = arcDiff().beamCd; loseShip();
+    }
+}
+function arcCapKey(ch) {
+    const A = STATE.arcade, c = A.cap; if (!c) return;
+    if (c.word[c.i] === ch) { c.i++; arcSfx(500 + c.i * 90, 600 + c.i * 90, 0.07, 'triangle', 0.08); if (c.i >= c.word.length) freeShip(); }
+    else { c.t += 400; c.flash = 200; arcSfx(160, 90, 0.1, 'square', 0.06); }   // a slip costs a little time
+}
+function freeShip() {
+    const A = STATE.arcade, F = arcF(), sf = F.sf, b = A.foes.find(e => e.type === 'boss' && e.hp > 0);
+    A.cap = null; A.invuln = 2000; A.vx = A.vy = 0; A.y = Math.min(F.yMax, A.y + 150 * sf); A.bombs = [];
+    const pts = arcPoints(500); STATE.score += pts; A.earned += pts; updateUI();
+    createExplosion(A.x, A.y, '#bc13fe'); createExplosion(A.x, A.y, '#00f3ff'); AudioFX.perfect(); shakeBody(200);
+    createPopText('BREAK FREE!  BOSS -3  +' + pts, A.x, A.y - 70 * sf, '#00ff66');
+    if (b) { b.mode = 'stun'; b.t = 0; b.beamT = arcDiff().beamCd; arcHitBoss(b, 3 / (b.mode === 'beam' || b.mode === 'hold' ? 2 : 1)); }   // the shockwave hurts it (the double-damage rule is not applied twice)
+}
+
+// ================= drawing for the new things =================
+function drawBoss(ctx, b, sf, t) {
+    const u = b.r / 46; ctx.save(); ctx.translate(b.x, b.y); ctx.lineJoin = 'round';
+    const col = b.hitT > 0 ? '#ffffff' : b.color; ctx.strokeStyle = col; ctx.shadowBlur = 16 * u; ctx.shadowColor = b.color; ctx.lineWidth = 2.6 * u;
+    const poly = pts => { ctx.beginPath(); pts.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](x * u, y * u)); ctx.closePath(); };
+    ctx.fillStyle = '#16081e';
+    for (const sx of [-1, 1]) {   // wing pods
+        poly([[sx * 50, -26], [sx * 92, -8], [sx * 98, 22], [sx * 60, 30], [sx * 46, 8]]); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sx * 78, 8 * u / u, 7 * u, 0, Math.PI * 2); ctx.fillStyle = col; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t / 150 + sx); ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = '#16081e';
+        ctx.fillRect(sx * 60 * u - 4 * u, 28 * u, 8 * u, 16 * u); ctx.strokeRect(sx * 60 * u - 4 * u, 28 * u, 8 * u, 16 * u);   // cannons
+    }
+    poly([[-52, -12], [-30, -40], [30, -40], [52, -12], [40, 28], [0, 48], [-40, 28]]); ctx.fill(); ctx.stroke();
+    for (const sx of [-1, 0, 1]) { poly([[sx * 16 - 5, -40], [sx * 16, -54], [sx * 16 + 5, -40]]); ctx.stroke(); }   // crown
+    const firing = b.mode === 'beam' || b.mode === 'hold', charging = b.mode === 'charge', pulse = 0.6 + 0.4 * Math.sin(t / (firing ? 70 : 220));
+    const g = ctx.createRadialGradient(0, 4 * u, 0, 0, 4 * u, 20 * u);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, firing ? '#00f3ff' : charging ? '#bc13fe' : b.color); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = pulse; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 4 * u, 20 * u, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0; ctx.fillStyle = '#ffea00'; for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 14 * u, -16 * u); ctx.lineTo(sx * 30 * u, -10 * u); ctx.lineTo(sx * 16 * u, -6 * u); ctx.closePath(); ctx.fill(); }   // eyes
+    ctx.restore();
+}
+
+function drawBeam(ctx, b, A, F, sf, t) {
+    if (b.mode !== 'charge' && b.mode !== 'beam' && b.mode !== 'hold') return;
+    const y0 = b.y + 40 * sf, y1 = F.H, h0 = 30 * sf, h1 = arcBeamHalf(b, y1, sf), active = b.mode !== 'charge';
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(b.x - h0, y0); ctx.lineTo(b.x + h0, y0); ctx.lineTo(b.x + h1, y1); ctx.lineTo(b.x - h1, y1); ctx.closePath();
+    if (active) {
+        const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(0.3, 'rgba(188,19,254,0.38)'); g.addColorStop(1, 'rgba(0,243,255,0.12)');
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2 * sf;   // rings sliding up the beam
+        for (let i = 0; i < 7; i++) { const k = ((t / 900 + i / 7) % 1), yy = y1 - (y1 - y0) * k, hw = h0 + (h1 - h0) * ((yy - y0) / (y1 - y0)); ctx.beginPath(); ctx.ellipse(b.x, yy, hw, hw * 0.12, 0, 0, Math.PI * 2); ctx.stroke(); }
+    } else {   // charging: only a blinking outline, so you can dodge it
+        ctx.strokeStyle = Math.floor(t / 120) % 2 ? 'rgba(188,19,254,0.9)' : 'rgba(255,255,255,0.4)'; ctx.setLineDash([12 * sf, 10 * sf]); ctx.lineWidth = 2.5 * sf; ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawCapsule(ctx, c, sf, t) {
+    const p = ARC_PW[c.kind], r = 15 * sf;
+    ctx.save(); ctx.translate(c.x, c.y); ctx.shadowBlur = 16 * sf; ctx.shadowColor = p.c;
+    ctx.fillStyle = '#0b0b16'; ctx.strokeStyle = p.c; ctx.lineWidth = 2.4 * sf; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.setLineDash([5 * sf, 6 * sf]); ctx.lineDashOffset = -t / 60; ctx.beginPath(); ctx.arc(0, 0, r + 5 * sf, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.shadowBlur = 0; ctx.fillStyle = p.c; ctx.font = `800 ${Math.floor(17 * sf)}px 'Oxanium'`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.l, 0, 1 * sf);
+    ctx.restore();
+}
+
+function drawCapturePrompt(ctx, A, W, H, sf) {
+    const c = A.cap, n = c.word.length, lw = 42 * sf, x0 = W / 2 - (n - 1) * lw / 2, y = H * 0.5, pw = Math.max(420 * sf, n * lw + 120 * sf);
+    ctx.save(); ctx.fillStyle = 'rgba(14,4,26,0.86)'; ctx.strokeStyle = c.flash > 0 ? '#ff2f6d' : '#bc13fe'; ctx.lineWidth = 2.5 * sf; ctx.shadowBlur = 20 * sf; ctx.shadowColor = '#bc13fe';
+    ctx.beginPath(); ctx.roundRect(W / 2 - pw / 2, y - 76 * sf, pw, 150 * sf, 12 * sf); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ff3df2'; ctx.font = `800 ${Math.floor(18 * sf)}px 'Oxanium'`; ctx.fillText('CAPTURED!  TYPE THE WORD', W / 2, y - 52 * sf);
+    ctx.font = `800 ${Math.floor(54 * sf)}px 'Share Tech Mono', monospace`;
+    for (let i = 0; i < n; i++) {
+        const ch = c.word[i].toUpperCase(), x = x0 + i * lw;
+        ctx.fillStyle = i < c.i ? '#00ff66' : i === c.i ? '#ffffff' : '#7f8fb0'; if (i === c.i) { ctx.shadowBlur = 14 * sf; ctx.shadowColor = '#ffffff'; }
+        ctx.fillText(ch, x, y - 4 * sf); ctx.shadowBlur = 0;
+        if (i === c.i) { ctx.fillRect(x - 15 * sf, y + 26 * sf, 30 * sf, 3 * sf); }
+    }
+    const k = Math.max(0, 1 - c.t / c.tmax), bw = pw - 60 * sf;   // time bar
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(W / 2 - bw / 2, y + 50 * sf, bw, 8 * sf);
+    ctx.fillStyle = k > 0.35 ? '#00f3ff' : '#ff2f6d'; ctx.fillRect(W / 2 - bw / 2, y + 50 * sf, bw * k, 8 * sf);
+    ctx.restore();
+}
+
+// shield bubble, and the status of the running power-ups
+function drawPowerStatus(ctx, A, W, H, sf, t) {
+    ctx.save(); ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = `800 ${Math.floor(14 * sf)}px 'Oxanium'`;
+    let x = 20 * sf; const y = H - 14 * sf;
+    const item = (txt, col) => { ctx.fillStyle = col; ctx.fillText(txt, x, y); x += ctx.measureText(txt).width + 24 * sf; };
+    if (A.pw.triple > 0) item('TRIPLE ' + Math.ceil(A.pw.triple / 1000) + 's', '#ffea00');
+    if (A.pw.shield) item('SHIELD', '#00f3ff');
+    if (A.pw.slow > 0) item('TIME WARP ' + Math.ceil(A.pw.slow / 1000) + 's', '#bc13fe');
+    ctx.restore();
+    if (A.pw.slow > 0) { ctx.save(); ctx.fillStyle = 'rgba(188,19,254,0.07)'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+}
+function drawShieldBubble(ctx, A, sf, t) {
+    ctx.save(); ctx.translate(A.x, A.y); const r = 54 * sf * (1 + 0.03 * Math.sin(t / 150));
+    ctx.fillStyle = 'rgba(0,243,255,0.10)'; ctx.strokeStyle = 'rgba(120,250,255,0.85)'; ctx.lineWidth = 2.5 * sf; ctx.shadowBlur = 16 * sf; ctx.shadowColor = '#00f3ff';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore();
 }
