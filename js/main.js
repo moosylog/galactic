@@ -659,6 +659,7 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
 }
 
 function spawnWave() {
+    if (arcadeFrozen()) { STATE.arcade.pendingSpawn = true; return; }   // a wave that comes due during arcade starts when it ends
     harvestMushrooms(); STATE.waveStartAt = performance.now();
     if (STATE.hostages.active) return; 
     
@@ -831,6 +832,8 @@ function gameLoop(time) {
     
     let dt = time - STATE.lastFrame; STATE.lastFrame = time;
     checkLastStand(); if (STATE.lastStand) dt *= 0.85; Music.update();
+    const frozen = arcadeFrozen();   // the arcade question or flight owns the screen: the typing game stands still and its clocks stop
+    if (frozen) { STATE.waveStartAt += dt; STATE.startTime += dt; STATE.taFadeOutTime += dt; }
 
     bgCtx.fillStyle = '#010103'; bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
     let spaceGrad = bgCtx.createRadialGradient(bgCanvas.width/2, bgCanvas.height, 0, bgCanvas.width/2, bgCanvas.height, bgCanvas.height);
@@ -872,7 +875,7 @@ function gameLoop(time) {
         if (fallingStar.lineSize <= 0 || fallingStar.y > canvas.height + 100) fallingStar = null;
     }
 
-    if (bonusDrones.length === 0 && !STATE.isHyperspace && !arcadeOn() && Math.random() < 0.002) {
+    if (bonusDrones.length === 0 && !STATE.isHyperspace && !frozen && Math.random() < 0.002) {
         bonusDrones.push(new BonusDrone(false)); 
     }
     maybeSpawnArcadeDrone(dt);
@@ -889,7 +892,7 @@ function gameLoop(time) {
 
     const cleared = enemies.every(e => e.state === 'ufo');
     const timedOut = !cleared && waveClockApplies() && performance.now() - (STATE.waveStartAt || 0) > waveAllowedMs() && aliveWordCount() < curveOf(CURVE.maxWords);
-    if ((cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
+    if (!frozen && (cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
         if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVERS WILL DIVE', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.diveFuse = performance.now() + 1500; }); }
         
         if (cleared && STATE.challenge) {   // challenge stage tally
@@ -930,7 +933,12 @@ function gameLoop(time) {
         }
     }
 
-    if (!STATE.isHyperspace) {
+    if (!STATE.isHyperspace && arcadeAsking()) {   // the question is open: the typing game stays visible but frozen
+        for (const e of enemies) if (e.active) e.draw(ctx, 0);
+        for (const b of bonusDrones) if (b.active) b.draw(ctx);
+        drawSnakes(ctx, time); drawMushrooms(ctx);
+    }
+    if (!STATE.isHyperspace && !frozen) {
         const wordsMap = {};
         for(let i=0; i<enemies.length; i++) { let e = enemies[i]; if(!e.isBoss) { if(!wordsMap[e.wordId]) wordsMap[e.wordId] = []; wordsMap[e.wordId].push(e); } }
         for(let wId in wordsMap) {
@@ -950,8 +958,9 @@ function gameLoop(time) {
         for(let i=enemies.length-1; i>=0; i--) { if(!enemies[i].active) enemies.splice(i, 1); else { enemies[i].update(dt, time); enemies[i].draw(ctx, dt); } }
         for(let i=bonusDrones.length-1; i>=0; i--) { if(!bonusDrones[i].active) bonusDrones.splice(i, 1); else { bonusDrones[i].update(dt); bonusDrones[i].draw(ctx); } }
         for(let i=lasers.length-1; i>=0; i--) { if(!lasers[i].active) lasers.splice(i, 1); else { lasers[i].update(dt); lasers[i].draw(ctx); } }
-        arcadeUpdate(dt); drawArcade(ctx); drawStageHud(ctx);
+        drawStageHud(ctx);
     }
+    if (!STATE.isHyperspace) { arcadeUpdate(dt); drawArcade(ctx); }
     
     ctx.globalAlpha = 1.0; const pBatches = {};
     for(let i=particles.length-1; i>=0; i--) {
