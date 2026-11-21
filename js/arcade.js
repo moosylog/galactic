@@ -13,7 +13,7 @@
 //   LEVEL 2  CRAWLER STRIKE A long crawler snakes down through a field of mushrooms. Every segment you shoot turns into a mushroom and splits the snake.
 //                           A spider scuttles through your zone and saucers fly over dropping bombs.
 const ARC = {
-    LIVES: 3, HULL_COST: 10, INVULN_MS: 2200, RESPAWN_MS: 900,   // ships per flight, health lost per ship, safe time after a respawn
+    INVULN_MS: 2200, RESPAWN_MS: 900,   // safe time after a respawn (ships per flight and health lost per ship depend on the division, see DIFF)
     ASK_GRACE: 700,                // ms before Y or N count, so a letter you were still typing cannot answer the question
     TOP_SPEED: 560, MARGIN: 48, ZONE_TOP: 0.58,   // ship speed (px/s at scale 1), side margin, and how high up the ship may fly (share of the screen height)
     FIRE_COOL: 150, MAX_SHOTS: 12, SHOT_SPEED: 1100,
@@ -23,7 +23,12 @@ const ARC = {
     DIVE_BONUS: 2,                // a swarm enemy shot while it dives scores this many times its normal points
     LEVELS: 2, NAMES: ['SWARM ASSAULT', 'CRAWLER STRIKE'],
     // how hard each division is: bomb rate, dive/spider rate, speed
-    DIFF: { academy: { bomb: 0.65, dive: 0.65, speed: 0.88 }, contender: { bomb: 1, dive: 1, speed: 1 }, apex: { bomb: 1.45, dive: 1.4, speed: 1.15 } }
+    // Academy is the gentle one: slow, few bombs, no aimed bolts, a smaller swarm and a shorter snake, 5 ships, and a lost ship costs only 5% health.
+    DIFF: {
+        academy: { bomb: 0.4, dive: 0.45, speed: 0.75, lives: 5, hull: 5, aimed: false, rows: 3, segs: 8, shrooms: 10 },
+        contender: { bomb: 1, dive: 1, speed: 1, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16 },
+        apex: { bomb: 1.45, dive: 1.4, speed: 1.15, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16 }
+    }
 };
 
 function freshArcade() {
@@ -87,7 +92,7 @@ function answerArcade(yes) {
 function startArcade() {
     const A = STATE.arcade, F = arcF();
     A.on = true; A.asking = false; A.keys = {}; A.fireQueued = false; A.shots = []; A.bombs = []; A.foes = []; A.shrooms = [];
-    A.lives = ARC.LIVES; A.kills = 0; A.earned = 0; A.totalHurt = 0; A.complete = false;
+    A.lives = A.maxLives = arcDiff().lives; A.kills = 0; A.earned = 0; A.totalHurt = 0; A.complete = false;
     A.vx = 0; A.vy = 0; A.age = 0; A.flash = 0; A.trail = []; A.trailT = 0; A.dead = 0; A.invuln = 0; A.cool = 0;
     A.x = F.W / 2; A.y = F.yMax;
     bonusDrones = [];                // drones carry a letter, so none stay on screen
@@ -180,8 +185,8 @@ function hurtShip() {
     if (A.phase !== 'play' || A.dead > 0 || A.invuln > 0) return;
     A.lives--; A.hurt++; A.totalHurt++;
     createExplosion(A.x, A.y, '#00f3ff'); createExplosion(A.x, A.y, '#ff2f6d'); AudioFX.explode(); AudioFX.error(); shakeBody(260);
-    STATE.hull = Math.max(1, STATE.hull - ARC.HULL_COST); updateUI();
-    createPopText('SHIP LOST  -' + ARC.HULL_COST + '% HEALTH', A.x, A.y - 50 * sf, '#ff0055');
+    STATE.hull = Math.max(1, STATE.hull - arcDiff().hull); updateUI();
+    createPopText('SHIP LOST  -' + arcDiff().hull + '% HEALTH', A.x, A.y - 50 * sf, '#ff0055');
     A.vx = A.vy = 0; A.shots = []; A.keys.fire = false;
     if (A.lives <= 0) { A.dead = 1e9; finishArcade(false); } else A.dead = ARC.RESPAWN_MS;
 }
@@ -215,6 +220,7 @@ function buildSwarm() {
     const group = (row, kind, c0, c1) => { const g = []; for (let c = c0; c <= c1; c++) g.push({ kind, row, col: c }); return g; };
     // seven groups of four fly in from alternating sides; the commanders arrive last
     const groups = [group(1, 'fly', 0, 3), group(1, 'fly', 4, 7), group(2, 'bee', 0, 3), group(2, 'bee', 4, 7), group(3, 'bee', 0, 3), group(3, 'bee', 4, 7), group(0, 'cmd', 2, 5)];
+    if (arcDiff().rows < 4) groups.splice(4, 2);   // a smaller swarm: no bottom row of bees
     groups.forEach((g, gi) => g.forEach((m, k) => {
         A.foes.push({ type: m.kind, core: true, row: m.row, col: m.col, hp: m.kind === 'cmd' ? 2 : 1, state: 'wait', delay: 700 + gi * 1450 + k * 170,
             x: -999, y: -999, ang: Math.PI / 2, side: gi % 2 === 0 ? -1 : 1, grp: gi, seed: Math.random() * 6.28, hitT: 0, hold: 0,
@@ -252,7 +258,7 @@ function startDive(e, hold) {
 function arcBomb(x, y, aimed) {
     const A = STATE.arcade, F = arcF(), D = arcDiff(), sf = F.sf;
     if (A.bombs.length >= 9) return;
-    if (aimed) {
+    if (aimed && D.aimed) {
         const dx = A.x - x, dy = Math.max(90 * sf, A.y - y), d = Math.hypot(dx, dy), sp = 340 * sf * D.speed;
         A.bombs.push({ x, y, vx: dx / d * sp, vy: dy / d * sp, kind: 'bolt', r: 5 * sf, age: 0, ph: 0 });
         arcSfx(1300, 500, 0.12, 'square', 0.05);
@@ -327,12 +333,12 @@ function crawlerGeom() {
 function buildCrawler() {
     const A = STATE.arcade, G = crawlerGeom();
     let tries = 0;
-    while (A.shrooms.length < 16 && tries++ < 300) {   // a field of mushrooms; never in row 0 (the snake comes in there), never two side by side
+    while (A.shrooms.length < arcDiff().shrooms && tries++ < 300) {   // a field of mushrooms; never in row 0 (the snake comes in there), never two side by side
         const c = Math.floor(Math.random() * G.n), r = 1 + Math.floor(Math.random() * (G.mushRows - 1));
         if (A.shrooms.some(m => m.r === r && Math.abs(m.c - c) <= 1)) continue;
         A.shrooms.push({ c, r, hp: 4 });
     }
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < arcDiff().segs; i++) {
         A.foes.push({ type: 'seg', core: true, hp: 1, order: i, head: i === 0, x: G.gx0 - (i + 0.5) * G.cell, y: G.rowY(0), row: 0, dir: 1, mode: 'h', ty: 0,
             r: G.cell * 0.46, seed: Math.random() * 6.28, hitT: 0, hold: 0, state: 'crawl', color: '#7dff3a', shootT: arcRand(2500, 5000) });
     }
@@ -650,8 +656,8 @@ function drawArcadeAsk(ctx, A, W, H, sf) {
     ctx.fillStyle = '#fff'; ctx.shadowBlur = 14 * sf; ctx.shadowColor = '#bc13fe'; ctx.font = `800 ${Math.floor(44 * sf)}px 'Oxanium'`; ctx.fillText('ARCADE MODE   Y or N', W / 2, py + 84 * sf); ctx.shadowBlur = 0;
     ctx.fillStyle = '#cfe8ff'; ctx.font = `700 ${Math.floor(15 * sf)}px 'Share Tech Mono', monospace`;
     ctx.fillText('Two shoot-out levels. The enemies move, dive and drop bombs.', W / 2, py + 130 * sf);
-    ctx.fillText('Typing is paused while you fly.', W / 2, py + 154 * sf);
-    ctx.fillText('Lose a ship: -' + ARC.HULL_COST + '% health (never below 1%).', W / 2, py + 178 * sf);
+    ctx.fillText('Arrow keys = MOVE,  Space = SHOOT.  Typing is paused while you fly.', W / 2, py + 154 * sf);
+    ctx.fillText('Lose a ship: -' + arcDiff().hull + '% health (never below 1%).', W / 2, py + 178 * sf);
     ctx.fillText('Clear both levels: +' + ARC.FINISH_HEAL + '% health and +' + ARC.FINISH_EMP + '% EMP.', W / 2, py + 202 * sf);
     ctx.globalAlpha = ready ? 1 : 0.35;
     const kw = 190 * sf, kh = 58 * sf, ky = py + 244 * sf, pulse = ready ? 0.7 + 0.3 * Math.sin(t / 220) : 0.5;
@@ -665,7 +671,7 @@ function drawArcadeAsk(ctx, A, W, H, sf) {
 
 function drawArcadeBanner(ctx, A, W, H, sf) {
     let title = '', sub = '', sub2 = '', k = 1;
-    if (A.phase === 'intro') { title = 'LEVEL ' + A.level; sub = ARC.NAMES[A.level - 1]; sub2 = 'ARROWS OR WASD MOVE   SPACE FIRES   ENTER = EMP'; k = Math.min(1, A.pt / 300, (2000 - A.pt) / 400); }
+    if (A.phase === 'intro') { title = 'LEVEL ' + A.level; sub = ARC.NAMES[A.level - 1]; sub2 = ''; k = Math.min(1, A.pt / 300, (2000 - A.pt) / 400); }
     else if (A.phase === 'clear') { title = 'LEVEL ' + A.level + ' CLEAR'; sub = '+' + A.clearBonus + (A.clearPerfect ? '   PERFECT +' + A.clearPerfect : ''); sub2 = A.level < ARC.LEVELS ? 'GET READY' : ''; k = Math.min(1, A.pt / 250, (2600 - A.pt) / 400); }
     else if (A.phase === 'done') { title = 'ARCADE COMPLETE'; sub = A.kills + ' HITS   +' + A.earned; sub2 = '+' + ARC.FINISH_HEAL + '% HEALTH   +' + ARC.FINISH_EMP + '% EMP'; k = Math.min(1, A.pt / 250, (3000 - A.pt) / 400); }
     else if (A.phase === 'over') { title = 'OUT OF SHIPS'; sub = A.kills + ' HITS   +' + A.earned; k = Math.min(1, A.pt / 250, (2400 - A.pt) / 400); }
@@ -677,12 +683,21 @@ function drawArcadeBanner(ctx, A, W, H, sf) {
     ctx.restore();
 }
 
+// the controls, in plain words, on screen all the time (big during the intro, a quiet strip afterwards)
+function drawArcadeControls(ctx, A, W, H, sf) {
+    const big = A.phase === 'intro', y = big ? H * 0.36 + 100 * sf : H - 14 * sf;
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (big) { ctx.globalAlpha = Math.max(0, Math.min(1, A.pt / 300, (2000 - A.pt) / 400)); ctx.fillStyle = '#00f3ff'; ctx.shadowBlur = 12 * sf; ctx.shadowColor = '#00f3ff'; ctx.font = `800 ${Math.floor(26 * sf)}px 'Oxanium'`; ctx.fillText('ARROW KEYS = MOVE        SPACE = SHOOT', W / 2, y); ctx.shadowBlur = 0; ctx.fillStyle = '#cfe8ff'; ctx.font = `700 ${Math.floor(14 * sf)}px 'Share Tech Mono', monospace`; ctx.fillText('(WASD works too)   Enter = EMP bomb when your EMP bar is full', W / 2, y + 30 * sf); }
+    else { ctx.fillStyle = 'rgba(207,232,255,0.7)'; ctx.font = `700 ${Math.floor(14 * sf)}px 'Share Tech Mono', monospace`; ctx.fillText('ARROW KEYS = MOVE     SPACE = SHOOT', W / 2, y); }
+    ctx.restore();
+}
+
 function drawArcadeHud(ctx, A, W, sf) {
     ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowBlur = 8 * sf; ctx.shadowColor = '#00f3ff';
     ctx.fillStyle = '#fff'; ctx.font = `800 ${Math.floor(16 * sf)}px 'Oxanium'`;
     ctx.fillText('ARCADE   LEVEL ' + A.level + '/' + ARC.LEVELS + '   ' + ARC.NAMES[Math.max(0, A.level - 1)], W / 2, 72 * sf);
     ctx.shadowBlur = 0;
-    for (let i = 0; i < ARC.LIVES; i++) {   // ships left
+    for (let i = 0; i < A.maxLives; i++) {   // ships left
         const x = W / 2 - 132 * sf + i * 22 * sf, y = 96 * sf, on = i < A.lives;
         ctx.fillStyle = on ? '#00f3ff' : 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.moveTo(x, y - 8 * sf); ctx.lineTo(x + 8 * sf, y + 7 * sf); ctx.lineTo(x, y + 3 * sf); ctx.lineTo(x - 8 * sf, y + 7 * sf); ctx.closePath(); ctx.fill();
     }
@@ -718,5 +733,5 @@ function drawArcade(ctx) {
     }
     if (A.dead <= 0 && !(A.invuln > 0 && Math.floor(t / 90) % 2)) drawArcadeShip(ctx, A, sf);   // blinks while it is safe after a respawn
     ctx.restore();
-    drawArcadeHud(ctx, A, W, sf); drawArcadeBanner(ctx, A, W, H, sf);
+    drawArcadeHud(ctx, A, W, sf); drawArcadeBanner(ctx, A, W, H, sf); drawArcadeControls(ctx, A, W, H, sf);
 }
