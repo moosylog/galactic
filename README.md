@@ -163,7 +163,14 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 - **ARCADE LINK:** an arcade drone is guaranteed on the next wave that can have one.
 In a daily run the offers depend only on the date and the sector, so everyone sees the same choices and the shared word sequence is not affected.
 
-**Arcade mode (optional, time-limited).** Now and then a purple **ARCADE** drone flies across (at most one per wave, from wave 2; never during bosses, rescues or Centipede waves). Type its letter to shoot it, then press **Space** within 8 seconds to launch, or ignore it and nothing changes. For **15 seconds** the screen becomes a plain shooter: the keyboard, the letters on the enemies and the word display all disappear, and you fly a swept-wing fighter that banks as it moves. **Left and right arrows** fly it, **up and down arrows** take it up into the lower part of the screen (as far as 58% of the screen height), and **Space** fires **double plasma shots**. Hold Space to keep firing. Every enemy you hit scores 100 points (times your score multiplier). It does not change your combo, accuracy or WPM, **Enter** still fires the EMP, and enemies you hit leave their words as if they had fallen. No bonus drones appear while you fly. Each hit shows its points, and **every 8th hit adds 1.5 seconds** to the timer (up to 6 extra seconds in one flight). When an ARCADE drone appears, a short sound and a message tell you to type its letter. The mode ends early if a boss or a Centipede wave arrives. Letters that reach the danger line still cost health.
+**Arcade mode (optional bonus fight).** Now and then a purple **ARCADE** drone flies across (at most one per wave, from wave 2; never during bosses, rescues or Centipede waves). Type its letter to shoot it. The game freezes and asks **ARCADE MODE Y or N**. **N** drops the drone and the typing game carries on. **Y** hides the keyboard and the letters and starts two full shoot-out levels. The typing game, its wave clock and your WPM clock are paused the whole time, so nothing can hurt your run while you fly. (Y and N only count after a short pause, so a letter you were still typing cannot answer by accident.)
+
+Fly with the **arrow keys or WASD** (up and down reach as far as 58% of the screen height), **Space** fires double plasma shots (hold it to keep firing), and **Enter** fires your EMP as a smart bomb: it clears every bomb and hits every enemy once.
+
+- **Level 1, Swarm Assault.** Bees, butterflies and four commanders swoop in on curved paths and settle into a swaying formation. Then they break off, loop and dive at you, dropping bombs on the way. Commanders take two hits, bring escorts and fire aimed bolts. Shooting a diver scores double. As the swarm thins out the dives get faster.
+- **Level 2, Crawler Strike.** A 12-segment crawler snakes down through a field of mushrooms and drops a row at each edge or mushroom. Every segment you shoot turns into a mushroom and splits the snake. Its heads drop bombs when they pass over you, a spider scuttles through your zone and saucers sweep over, dropping bombs.
+
+You start with **3 ships**. A bomb or a collision costs a ship and **10% health** (health never drops below 1% in here), and you respawn safely after a moment. Running out of ships ends the flight early. Every enemy scores flat points (times your score multiplier); each level adds a clear bonus and a perfect bonus (no ship lost). **Clear both levels for +20% health and +50% EMP charge.** Combo, accuracy and WPM are never touched. All the numbers are in the `ARC` block at the top of `js/arcade.js`.
 
 **Challenge Stage tally.** When a Challenge Stage ends, a message shows how many letters you hit out of the total, for example *CHALLENGE STAGE: 7/8 HIT*, with *PERFECT!* if you got them all. A perfect wave (no wrong key) now plays a short rising jingle.
 
@@ -252,7 +259,7 @@ All settings are in **Setup** on the start screen. **They cannot be changed mid-
 | Letter keys | Start a word with its first letter, then type it in order. |
 | **1 / 2 / 3** (perk screen) | Choose a perk after a sector. |
 | **Enter** | Detonate EMP when the bar is full. On the end screen: play again. |
-| **Space** (after collecting the ARCADE drone) | Launch arcade mode. During it: **arrow keys** fly the ship and **Space** fires double shots. |
+| **Y / N** (after shooting the ARCADE drone) | Start arcade mode, or skip it. During it: **arrows or WASD** fly, **Space** fires, **Enter** fires the EMP as a smart bomb. |
 | **Esc** | Pause or resume. |
 | **PAUSE** button (bottom left) | Same as Esc. |
 | **EXIT** button / **EXIT TO MAIN SCREEN** | End the run and return to the title screen. See below. |
@@ -339,7 +346,7 @@ Records, typing statistics, your custom layout and the keyboard size are stored 
   - `js/config.js` (hardware geometry, difficulty, words, helpers)
   - `js/entities.js` (enemies, boss, lasers)
   - `js/music.js` (the combo-driven music and the start-screen tune)
-  - `js/arcade.js` (the optional arcade mode)
+  - `js/arcade.js` (the optional arcade mode: Y/N question and two shoot-out levels)
   - `js/perks.js` (the perk picks after each sector)
   - `js/main.js` (game loop, input, interface, records)
 - **Tests:** `npm test` runs the smoke, practice and pacing tests.
