@@ -57,11 +57,13 @@
             <section id="scr-title" class="scr">
                 <div class="setup-chip" id="setup-chip" role="button" tabindex="0" onclick="showScreen('setup')" title="Change hardware and layout"></div>
                 <div class="div-buttons" role="group" aria-label="Division">
+                    <button class="div-btn" data-div="beginner" onclick="setDivision('beginner')"><b>BEGINNER</b><span>3-4 letters &middot; guided &middot; x0.5</span></button>
                     <button class="div-btn" data-div="academy" onclick="setDivision('academy')"><b>ACADEMY</b><span>3-5 letters &middot; x1</span></button>
                     <button class="div-btn" data-div="contender" onclick="setDivision('contender')"><b>CONTENDER</b><span>4-7 letters &middot; x2</span></button>
                     <button class="div-btn" data-div="apex" onclick="setDivision('apex')"><b>APEX</b><span>5-8 letters &middot; x3</span></button>
                 </div>
                 <select id="diffSelect" style="display:none" aria-hidden="true">
+                    <option value="beginner">Beginner</option>
                     <option value="academy">Academy</option>
                     <option value="contender" selected>Contender</option>
                     <option value="apex">Apex</option>
@@ -169,7 +171,9 @@
                     <div class="howto-card"><b>BONUS &middot; ARCADE MODE</b><span>Shoot the purple ARCADE drone by typing its letter. The game asks: Arcade mode Y or N? Press Y to fly four shoot-out levels (arrows move, Space fires): a swarm, a crawler, a bonus challenge stage and a boss with a capture beam. Catch the power-up capsules. Typing waits for you.</span></div>
                 </div>
                 <p class="data-note">White glow on the keyboard = next key. Yellow dot = a key you are training.</p>
+                <div class="howto-cards"><div class="howto-card"><b>NEW TO TYPING? PICK BEGINNER</b><span>A one-minute guided lesson, slow letters, and only the home row to start. More keys unlock as you type clean. A key a boss steals stays on the keyboard, grayed out and locked.</span></div></div>
                 <button class="btn-action" onclick="finishHowTo()">GOT IT</button>
+                <button class="btn-action" onclick="replayTraining()" style="margin-top:8px">PLAY THE FLIGHT TRAINING</button>
             </section>
         </div>
     </div>
@@ -205,6 +209,7 @@
 <script src="js/config.js"></script>
 <script src="js/entities.js"></script>
 <script src="js/arcade.js"></script>
+<script src="js/coach.js"></script>
 <script src="js/perks.js"></script>
 <script src="js/music.js"></script>
 <script src="js/main.js"></script>

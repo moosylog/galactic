@@ -29,7 +29,7 @@ A Galaga-style typing shooter for keyboard enthusiasts. Letters fly in as words,
 
 ## Quick start
 1. Open the game. On your first visit a short **How to play** screen appears once.
-2. On the title screen pick a **division** (Academy, Contender or Apex). Your current hardware and layout are shown in the line above it. Click that line to change them.
+2. On the title screen pick a **division** (Beginner, Academy, Contender or Apex). Your current hardware and layout are shown in the line above it. Click that line to change them.
 3. Press **Enter** (or click PLAY). A coin drops and the game starts.
 4. Type the first letter of a word, then finish it in order. Keep your **health** above zero. Press **Esc** to pause.
 
@@ -93,7 +93,7 @@ The panel at the bottom of the screen mirrors the layout you chose. Letters dive
   - This teaches finger positions, especially on a custom layout.
 - **A yellow dot marks your focus keys:** the keys that belong to your weakest bigrams right now. It shows what the game is currently training.
 - **A stronger pink flash** on a key means a diving letter is heading for it.
-- **Captured keys disappear** from the panel during a boss rescue and come back when you rescue them.
+- **Stolen keys stay visible, gray and locked.** When a boss captures keys after a mistake, they fly off to the boss, but the keyboard keeps a gray ghost of each one: a dashed outline, a small padlock and a dimmed letter. You still need to see where they are, because they are exactly the keys you need to practice. While the practice words run, the dashed outline pulses amber and the white *next key* glow still works on them. Win the keys back and they return, glowing yellow (dual fire). The legend above the danger line changes to say so.
 - **A small legend** in the right corner above the danger line explains the glow and the dot: *WHITE GLOW = NEXT KEY, YELLOW DOT = FOCUS KEY*.
 
 **Keyboard Size** (Setup, Display tab; remembered between visits):
@@ -142,7 +142,7 @@ A smaller panel gives letters more room to fall, so the game is a little easier.
 **Wave modifiers** (about three waves in ten, never in wave 1, boss waves or Challenge Stages). A banner announces the modifier and the corner shows *NOW: ...* while it lasts. The preview tells you one wave ahead.
 - **SLOW-MO:** everything moves about 30% slower.
 - **DOUBLE POINTS:** your score for the wave counts twice.
-- **TURBO:** everything moves about 30% faster and score counts 1.5 times. Not used on Academy.
+- **TURBO:** everything moves about 30% faster and score counts 1.5 times. Not used on Beginner or Academy.
 
 **The wave clock.** From wave 3 the next wave arrives on a timer, whether or not you cleared the last one. The thin bar just above the danger line, with *NEXT:* beside it, shows the time left. When it runs out, the bar flashes *NEXT WAVE ARRIVING*, any letters you left behind get a short fuse (1.5 seconds) and then **dive**, and the next wave arrives. The time allowed is what a typist at the *required speed* would need for the wave's letters, plus a little time per word for finding it. Those allowances shrink as waves pass. That required speed starts low and rises every wave, faster on Apex than on Contender and Academy. If you keep up, you never notice the clock. If you fall behind, leftovers pile up and attack. There are never more than 3 (Academy), 4 (Contender) or 5 (Apex) words on screen at once, and a late wave brings only as many new words as fit. New words never start with the same letter as a word already on screen, and each takes a free row, so words never sit on top of each other. Waves 1 and 2, boss waves, Challenge Stages and the wave before a boss have no clock and must be cleared. This is what makes a run end: everybody is eventually outpaced, and the ranking is how far you get.
 
@@ -188,20 +188,20 @@ You start with **3 ships** (**5 in Academy**). A bomb or a collision costs a shi
 
 | Event | Effect |
 |---|---|
-| A letter reaches the danger line | −5 (Academy), −8 (Contender), −10 (Apex), plus 1 more for every 10 waves. Blocked by a shield. None in Challenge Stages. |
+| A letter reaches the danger line | −2 (Beginner), −5 (Academy), −8 (Contender), −10 (Apex), plus 1 more for every 10 waves. Blocked by a shield. None in Challenge Stages. |
 | Boss strike (you stopped typing) | −10, plus 1 more for every 10 waves. The strike timer also shortens as waves pass. |
 | Boss rescue: typo | −2 |
 | Boss rescue: word falls past the line | −5 |
 | A typo in a normal wave | −1 (it can never take you below 1%) |
-| Clearing a boss sector | +20 (Academy), +12 (Contender), +8 (Apex) |
-| A perfect wave | +5 (Academy), +3 (Contender), +2 (Apex) |
-| Every 50 combo | +5 (Academy), +3 (Contender), +2 (Apex) |
+| Clearing a boss sector | +30 (Beginner), +20 (Academy), +12 (Contender), +8 (Apex) |
+| A perfect wave | +8 (Beginner), +5 (Academy), +3 (Contender), +2 (Apex) |
+| Every 50 combo | +8 (Beginner), +5 (Academy), +3 (Contender), +2 (Apex) |
 
 ### Score
 
 - **Each letter you shoot** = (100 + 10 × your current combo) × the **accuracy multiplier** × the **difficulty multiplier**. The combo part stops growing at a combo of 50, so one long streak cannot run away with the score.
 - **Accuracy multiplier** (your last 100 keystrokes): 100% ×2, 98%+ ×1.5, 95%+ ×1, 90%+ ×0.5, below 90% ×0.1.
-- **Difficulty multiplier:** Academy ×1, Contender ×2, Apex ×3.
+- **Difficulty multiplier:** Beginner ×0.5, Academy ×1, Contender ×2, Apex ×3.
 - **Word bonuses** (all multiplied by the difficulty multiplier): CLEAN (no mistakes) +10 per letter; BLAZING (clean and well above your usual speed) +25 more per letter; golden word +100 per letter; UFO +300.
 - **Boss:** finishing a boss pays 500 × the multipliers.
 - **Perfect wave:** 1,000 × the wave number × the difficulty multiplier (doubled in a Challenge Stage).
@@ -214,8 +214,16 @@ Scores are only comparable within the same difficulty.
 
 ## Difficulty levels
 
+**Beginner is for people who have never touched a typing game.**
+- **Flight training.** Your first Beginner run opens with a one-minute lesson on the real keyboard: find the glowing key, finish a word, handle two words, make a mistake on purpose (it costs nothing), then two short cards on health, keys, bosses and the arcade. The letters wait for you and nothing can hurt you. **SPACE** moves on from a card and **TAB** skips the training. It plays on Beginner runs until you have finished or skipped it once. You can replay it from the **How to play** screen.
+- **The keys open in three stages:** home row, then the rows above it, then the rows below it (it follows your physical layout, so it works for every keyboard and layout). Words only use open letters. Keys that are not open yet are drawn dim and are ignored (no penalty). After about 16 correct letters at 88% accuracy or better, the next stage opens with a *NEW KEYS* message and the new keys pulse green. Your stage is remembered between runs.
+- **Everything is gentler:** 3 to 4 letter words, the slowest letters, a wrong key never costs health and never jams your weapon, at most 2 words at a time, and bigger heals. The arcade levels are the easiest too (6 ships, 3% health per ship, a short boss fight).
+- Because the first stage has few real words on some layouts, a few short drill words made of the open letters are mixed in.
+
+
 | Level | Word length | Letters hover before diving | Score | Word pool |
 |---|---|---|---|---|
+| **Beginner** | 3 to 4 | About 12 s | ×0.5 | Starts on the home row only (a guided lesson first); the top row and then the bottom row open as you type clean. Easiest everything: slowest letters, lots of healing, wrong keys never cost health. |
 | **Academy** | 3 to 5 | About 7 s | ×1 | Only the most common words, widening wave by wave. Avoids Q, X, Z, J. |
 | **Contender** | 4 to 7 | About 4 s | ×2 | Common words, widening faster. |
 | **Apex** | 5 to 8 | About 1.5 s | ×3 | A wide pool from the start. |
@@ -297,7 +305,7 @@ If you meet a word you do not like, add it to `BLOCKED_WORDS` in `js/config.js`.
 ---
 
 ## Tips for beginners
-- Start on **Academy**, keep the **Compact** keyboard, and follow the **white glow** to learn where each key is.
+- Brand new to typing? Start on **Beginner**. Otherwise start on **Academy**, keep the **Compact** keyboard, and follow the **white glow** to learn where each key is.
 - **Accuracy before speed.** The score multiplier rewards clean typing far more than fast typing.
 - Look at the **word helper**, pick one word, finish it, then pick the next.
 - A typo costs only a little in normal waves. Do not freeze. Keep typing.
@@ -316,8 +324,11 @@ That is the optional Bonus UFO. You never have to type it.
 **What are the pink mushrooms?**
 Letters you shot in a Centipede wave. They are worth 20 points each at the start of the next wave.
 
-**Why did my keys disappear from the keyboard?**
-A boss captured them after a mistake. Type the 5 practice words to rescue them.
+**Why are some of my keys gray with a padlock?**
+A boss stole them after a mistake. They stay on the keyboard as gray ghosts so you can still find them. Type the 5 practice words to win them back.
+
+**Why are some keys very dim on Beginner?**
+Those keys are not open yet. Beginner starts with the home row and opens more keys as you type clean.
 
 **Why can't I resume after pressing Exit?**
 On purpose: it stops settings from being changed mid-run. Use **Pause** (Esc) to take a break.
