@@ -376,3 +376,14 @@ Inspired by the capture-and-rescue mechanic of Galaga (Namco). Not affiliated.
 The word list is *google-10000-english*, derived from the Google Web Trillion Word Corpus (Norvig / Kaufman). It is fetched at run time, not included here, and its own licence (educational and personal use) applies to it.
 
 © 2026 Moosy Research. All rights reserved. See `LICENSE`.
+
+## Releasing
+
+Browsers cache files, so every release needs a new build number. **Do not touch `CURRENT_VERSION`** in `js/config.js`: that is the *save format* version, and changing it wipes every player's saved records, bigram stats and custom layouts. Only bump it if the save format itself changes.
+
+1. Change `BUILD_VERSION` in `js/config.js`.
+2. In `index.html`, change `window.GK_BUILD` and the `?v=` on every script and stylesheet tag to the same number.
+3. Run `npm test`. `tests/version.test.js` fails if anything is missed (a tag without `?v=`, a different number, a script that `index.html` or the test harness does not load).
+4. Ship, and tell returning players to hard-reload once (Ctrl+Shift+R).
+
+How it protects players: a fresh `index.html` asks for new file URLs, so it never mixes with stale files. If a browser keeps a stale `index.html` next to fresh scripts, the cache guard at the top of `js/config.js` notices the mismatch and reloads once onto an uncached address, with a short "Game updated. Reloading..." message. It cannot loop (it remembers the attempt for the session).
