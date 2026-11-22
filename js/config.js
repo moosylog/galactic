@@ -5,6 +5,7 @@ const CURRENT_VERSION = "1.5.0";
 
 const DATA = {
     DIFFICULTY: {
+        beginner: { minLen: 3, maxLen: 4, baseSpeed: 0.12, scoreMod: 0.5, grace: 12000, rush: 0.0005, missDmg: 2, hold: 600000, rank0: 300, rankStep: 40 },
         academy: { minLen: 3, maxLen: 5, baseSpeed: 0.25, scoreMod: 1.0, grace: 7000, rush: 0.002, missDmg: 5, hold: 120000, rank0: 600, rankStep: 120 },
         contender: { minLen: 4, maxLen: 7, baseSpeed: 0.45, scoreMod: 2.0, grace: 4000, rush: 0.005, missDmg: 8, hold: 10000, rank0: 1500, rankStep: 250 },
         apex: { minLen: 5, maxLen: 8, baseSpeed: 0.65, scoreMod: 3.0, grace: 1500, rush: 0.01, missDmg: 10, hold: 2000, rank0: 3500, rankStep: 400 }
@@ -85,7 +86,7 @@ if (!cachedDict) {
 }
 
 function getPracticeWords(bigram, single, count = 5) {
-    const typable = w => w.length <= 8 && [...w].every(ch => STATE.activeKeys[ch]);
+    const typable = w => w.length <= 8 && [...w].every(ch => STATE.activeKeys[ch] && keyOpen(ch));
     const lim = rankLimit() * 2, easy = w => WORD_RANK[w] === undefined || WORD_RANK[w] < lim;
     const occ = w => w.split(bigram).length - 1;
     const shuffle = a => a.sort(() => Math.random() - 0.5);
@@ -270,12 +271,12 @@ function waveMod(n) {
     const r = (h % 1000) / 1000;
     if (r < 0.08) return 'SLOW';
     if (r < 0.20) return 'DOUBLE';
-    if (r < 0.30 && STATE.difficulty !== 'academy') return 'TURBO';
+    if (r < 0.30 && STATE.difficulty !== 'academy' && STATE.difficulty !== 'beginner') return 'TURBO';
     return null;
 }
 function nextWaveText() {
     const n = (STATE.wave || 1) + 1, k = waveKind(n), m = waveMod(n);
-    return 'NEXT: ' + (k === 'NORMAL' ? 'WAVE ' + n : k) + (m ? '  \u00B7  ' + WAVE_MODS[m].name : '');
+    return 'NEXT: ' + (k === 'NORMAL' ? 'WAVE ' + n : k) + (m ? '  \u00B7  ' + WAVE_MODS[m].name : '') + (isBeginner() && STATE.keyStage ? '  \u00B7  KEYS ' + STATE.keyStage + '/3 ' + KEY_STAGES[STATE.keyStage - 1] : '');
 }
 function refreshBoost() {
     STATE.scoreBoost = (STATE.waveBoost || 1) * (STATE.lastStand ? 1.5 : 1);
@@ -316,17 +317,17 @@ const CURVE = {
     // The wave clock: the next wave arrives on a timer, whether or not you cleared the last one.
     // The time allowed is reqBaseMs plus the time a typist at the required speed needs for the wave's letters.
     // Required speed per division = [start, WPM added per wave], capped at reqCap.
-    reqWpm: { academy: [8, 1.4], contender: [28, 2.0], apex: [40, 3.5] }, reqCap: 700, reqBaseMs: 1500, reqBaseDecay: 8, reqBaseFloor: 500, reqWordMs: 700, reqWordDecay: 6, reqWordFloor: 150,
-    maxWords: { academy: 3, contender: 4, apex: 5 },       // never more words than this on screen at once
-    speedPerWave: { academy: 0.10, contender: 0.06, apex: 0.045 }, speedCap: 5,    // letters get faster every wave
-    diveGrowth: { academy: 0.0012, contender: 0.001, apex: 0.0012 },                  // how eager letters are to dive (per wave)
+    reqWpm: { beginner: [3, 0.6], academy: [8, 1.4], contender: [28, 2.0], apex: [40, 3.5] }, reqCap: 700, reqBaseMs: 1500, reqBaseDecay: 8, reqBaseFloor: 500, reqWordMs: 700, reqWordDecay: 6, reqWordFloor: 150,
+    maxWords: { beginner: 2, academy: 3, contender: 4, apex: 5 },       // never more words than this on screen at once
+    speedPerWave: { beginner: 0.05, academy: 0.10, contender: 0.06, apex: 0.045 }, speedCap: 5,    // letters get faster every wave
+    diveGrowth: { beginner: 0.0006, academy: 0.0012, contender: 0.001, apex: 0.0012 },                  // how eager letters are to dive (per wave)
     graceDecay: 0.01, graceMin: 0.4,               // hover time before a dive shrinks by this share of its base per wave (floor)
     dmgPerWave: 0.1,                               // extra health lost per missed letter or boss strike, per wave
     bossTimerDecay: 0.005,                         // the boss strike timer shrinks by this share per wave (floor 50%)
-    fourthWord: { academy: 999, contender: 21, apex: 13 },    // wave from which a 4th word appears
-    healSector: { academy: 20, contender: 12, apex: 8 },      // health restored when a sector is cleared
-    healPerfect: { academy: 5, contender: 3, apex: 2 },       // health restored by a perfect wave
-    healCombo: { academy: 5, contender: 3, apex: 2 },         // health restored every 50 combo
+    fourthWord: { beginner: 999, academy: 999, contender: 21, apex: 13 },    // wave from which a 4th word appears
+    healSector: { beginner: 30, academy: 20, contender: 12, apex: 8 },      // health restored when a sector is cleared
+    healPerfect: { beginner: 8, academy: 5, contender: 3, apex: 2 },       // health restored by a perfect wave
+    healCombo: { beginner: 8, academy: 5, contender: 3, apex: 2 },         // health restored every 50 combo
     comboCap: 50                                   // the combo bonus per letter stops growing at this combo
 };
 function reqWpm(wave) { const [a, b] = curveOf(CURVE.reqWpm); return Math.min(CURVE.reqCap, a + b * (wave || 1)); }
@@ -355,4 +356,55 @@ function freeRow() {
     const busy = r => enemies.some(e => !e.isBoss && e.active && (e.state === 'hover' || e.state === 'enter') && e.formY !== undefined && Math.abs(e.formY - rowY(r)) < 45 * STATE.sf);
     for (let r = 0; r < 6; r++) if (!busy(r)) return r;
     return aliveWordCount() % 6;
+}
+
+
+// ================= BEGINNER: the keys open up in three stages =================
+// A new typist should not face the whole alphabet at once. Beginner starts with the home row, then adds the rows above it, then the rows below it.
+// The rows come from the physical layout, so this works for every keyboard and layout. Words only use unlocked letters; locked keys are drawn dim and ignored.
+const KEY_STAGES = ['HOME ROW', 'TOP ROW', 'BOTTOM ROW'];
+const KEY_UNLOCK = { letters: 16, accuracy: 0.88 };   // correct letters needed in a stage, at this accuracy, before the next stage opens
+function isBeginner() { return STATE.difficulty === 'beginner'; }
+function keyOpen(ch) { return !STATE.unlocked || !/^[a-z]$/.test(ch) || STATE.unlocked.has(ch); }
+// letters of each stage: [home row, rows above it, rows below it]
+function keyStageLetters() {
+    const rows = {};
+    Object.keys(STATE.activeKeys).filter(c => /^[a-z]$/.test(c)).forEach(c => { const r = Math.floor((STATE.activeKeys[c].gy || 0) + 1e-6); (rows[r] = rows[r] || []).push(c); });   // floor, not round: pinky columns sit up to 0.9 of a row lower
+    const order = Object.keys(rows).map(Number).sort((a, b) => a - b);   // top to bottom
+    if (!order.length) return [[], [], []];
+    let home = order.length >= 3 ? order[Math.floor((order.length - 1) / 2)] : order.reduce((b, r) => rows[r].length > rows[b].length ? r : b, order[0]);
+    const pick = f => [].concat(...order.filter(f).map(r => rows[r]));
+    return [pick(r => r === home), pick(r => r < home), pick(r => r > home)];
+}
+function applyKeyStage(stage) {
+    STATE.keyStage = stage; STATE.unlocked = new Set(); const st = keyStageLetters();
+    for (let i = 0; i < stage; i++) st[i].forEach(c => STATE.unlocked.add(c));
+    STATE.stageCorrect = 0; STATE.stageTotal = 0;
+}
+function unlockNextStage() {
+    if (STATE.keyStage >= 3) return;
+    const st = keyStageLetters()[STATE.keyStage], now = performance.now(); STATE.newKeys = STATE.newKeys || {};
+    st.forEach(c => { STATE.newKeys[c] = now + 25000; });
+    applyKeyStage(STATE.keyStage + 1); savePrefs({ beginnerStage: STATE.keyStage });
+    createPopText('NEW KEYS: ' + KEY_STAGES[STATE.keyStage - 1] + '  ' + st.map(c => c.toUpperCase()).join(' '), canvas.width / 2, canvas.height / 2 - 100 * STATE.sf, '#00ff66');
+    AudioFX.bonus();
+}
+// called when a wave is cleared (before its counters are reset): enough clean typing opens the next stage
+function beginnerWaveDone() {
+    if (!isBeginner() || STATE.keyStage >= 3 || !STATE.waveTotal) return;
+    STATE.stageCorrect += STATE.waveCorrect; STATE.stageTotal += STATE.waveTotal;
+    const acc = STATE.stageCorrect / Math.max(1, STATE.stageTotal);
+    if (STATE.stageCorrect >= KEY_UNLOCK.letters && acc >= KEY_UNLOCK.accuracy) unlockNextStage();
+    else if (STATE.stageTotal >= KEY_UNLOCK.letters * 2) { STATE.stageCorrect = Math.floor(STATE.stageCorrect / 2); STATE.stageTotal = Math.floor(STATE.stageTotal / 2); }   // old mistakes fade
+}
+// pronounceable-ish drill words from the open letters, for the first stage where real words are scarce
+function drillWords(minLen, maxLen, n) {
+    const open = Object.keys(STATE.activeKeys).filter(c => /^[a-z]$/.test(c) && keyOpen(c)), out = [];
+    if (open.length < 2) return out;
+    for (let tries = 0; tries < 200 && out.length < n; tries++) {
+        const len = minLen + Math.floor(Math.random() * (maxLen - minLen + 1)); let w = '';
+        for (let i = 0; i < len; i++) { let c; do { c = open[Math.floor(Math.random() * open.length)]; } while (w.length && c === w[w.length - 1] && open.length > 2); w += c; }
+        if (!out.includes(w)) out.push(w);
+    }
+    return out;
 }

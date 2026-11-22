@@ -30,6 +30,7 @@ const ARC = {
     // how hard each division is: bomb rate, dive/spider rate, speed
     // Academy is the gentle one: slow, few bombs, no aimed bolts, a smaller swarm and a shorter snake, 5 ships, and a lost ship costs only 5% health.
     DIFF: {
+        beginner: { bomb: 0.3, dive: 0.35, speed: 0.65, lives: 6, hull: 3, aimed: false, rows: 3, segs: 6, shrooms: 8, drop: 0.2, chalN: 5, bossHp: 14, capMs: 12000, beamCd: 18000, fanMs: 4200, esc: 1 },
         academy: { bomb: 0.4, dive: 0.45, speed: 0.75, lives: 5, hull: 5, aimed: false, rows: 3, segs: 8, shrooms: 10, drop: 0.14, chalN: 6, bossHp: 20, capMs: 9000, beamCd: 14000, fanMs: 3400, esc: 1 },
         contender: { bomb: 1, dive: 1, speed: 1, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16, drop: 0.08, chalN: 8, bossHp: 32, capMs: 6500, beamCd: 9000, fanMs: 2200, esc: 2 },
         apex: { bomb: 1.45, dive: 1.4, speed: 1.15, lives: 3, hull: 10, aimed: true, rows: 4, segs: 12, shrooms: 16, drop: 0.06, chalN: 8, bossHp: 44, capMs: 5200, beamCd: 7500, fanMs: 1800, esc: 2 }
@@ -906,7 +907,7 @@ function arcHitBoss(b, dmg) {
 // ---- the capture ----
 function startCapture(b) {
     const A = STATE.arcade, D = arcDiff();
-    let w = 'the'; try { w = String(getWordForWave(STATE.wave, STATE.difficulty !== 'academy')).toLowerCase(); } catch (e) {}
+    let w = 'the'; try { w = String(getWordForWave(STATE.wave, STATE.difficulty !== 'academy' && STATE.difficulty !== 'beginner')).toLowerCase(); } catch (e) {}
     if (!/^[a-z]{3,8}$/.test(w)) w = 'the';
     A.cap = { word: w, i: 0, t: 0, tmax: D.capMs, sx: A.x, sy: A.y, flash: 0 };
     A.keys = {}; A.vx = A.vy = 0; b.mode = 'hold'; b.t = 0;

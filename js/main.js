@@ -394,11 +394,28 @@ function buildHUD() {
         let px = offsetX + (k.x * u) + (u/2); let py = offsetY + (k.y * u) + (u/2);
 
         if(/^[a-z0-9\s;,.\/'\[\]\-=\\`]$/i.test(finalChar)) {
-            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false, left: k.x < maxX/2 };
+            STATE.activeKeys[finalChar] = { x: px, y: py, w: Math.max((k.w||1)*u, u*0.8), h: Math.max((k.h||1)*u, u*0.8), char: finalChar, gy: k.y, color: (k.x < maxX/2) ? 'var(--neon-blue)' : 'var(--neon-pink)', isDual: !!STATE.dualChars[finalChar], isAbducted: false, left: k.x < maxX/2 };
             if(!STATE.bioTracker[finalChar]) STATE.bioTracker[finalChar] = { presses: 0, misses: 0, latencies: [] };
             tagKey(STATE.activeKeys[finalChar], hw, i, k, maxX);
         }
     });
+}
+
+// A key the boss has stolen stays on the keyboard as a gray, locked ghost: you still need to see where it is to practice it.
+// While the practice words are running it gets an amber pulse (those are the keys to type), and it still shows the white "next key" glow.
+function drawGhostKey(ctx, k, char, time, isGuide, practice) {
+    const sf = STATE.sf, x = k.x - k.w / 2 + 2, y = k.y - k.h / 2 + 2, w = k.w - 4, h = k.h - 4, pulse = 0.5 + 0.5 * Math.sin(time / 260);
+    ctx.save(); ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(86,96,110,0.30)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 6 * sf); ctx.fill();
+    ctx.setLineDash([6 * sf, 5 * sf]); ctx.lineWidth = 2 * sf; ctx.strokeStyle = practice ? 'rgba(255,176,0,' + (0.55 + 0.45 * pulse) + ')' : 'rgba(150,160,175,0.85)'; ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#c3ccd8'; ctx.font = `bold ${Math.max(14, k.h * 0.5)}px 'Share Tech Mono'`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(char.toUpperCase(), k.x, k.y + 3 * sf);   // the letter stays easy to read
+    const lx = k.x + k.w / 2 - 6 * sf, ly = k.y - k.h / 2 + 8 * sf, ls = 3.2 * sf, lc = practice ? '#ffb000' : '#aab4c2';   // a small padlock in the corner
+    ctx.fillStyle = lc; ctx.strokeStyle = lc; ctx.lineWidth = 1.4 * sf; ctx.fillRect(lx - ls, ly, ls * 2, ls * 1.5); ctx.beginPath(); ctx.arc(lx, ly, ls * 0.7, Math.PI, 0); ctx.stroke();
+    if (isGuide) {
+        ctx.strokeStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 22 * sf * (0.6 + 0.4 * Math.sin(time / 180)); ctx.lineWidth = 3 * sf;
+        ctx.beginPath(); ctx.roundRect(k.x - k.w / 2 + 1, k.y - k.h / 2 + 1, k.w - 2, k.h - 2, 6 * sf); ctx.stroke();
+    }
+    ctx.restore();
 }
 
 function drawShipHUD(time) {
@@ -420,7 +437,8 @@ function drawShipHUD(time) {
     else { const heads = wordHeads(); enemies.forEach(e => { if (!e.isBoss && e.index === heads[e.wordId] && e.active && !e.targeted && e.state !== 'ufo') guide.add(e.char); }); }
     ctx.save(); ctx.shadowBlur = 0; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = `${Math.max(11, 12 * STATE.sf)}px 'Share Tech Mono'`;
     if (!arcadeOn()) {
-        ctx.fillText('WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
+        const anyGhost = Object.values(STATE.activeKeys).some(kk => kk.isAbducted);
+        ctx.fillText(anyGhost ? 'GRAY LOCKED KEY = STOLEN: TYPE IT IN PRACTICE TO WIN IT BACK    WHITE GLOW = NEXT KEY' : 'WHITE GLOW = NEXT KEY    YELLOW DOT = FOCUS KEY', canvas.width - 12 * STATE.sf, splitLine - 12 * STATE.sf);
         ctx.fillStyle = '#cfe8ff'; ctx.fillText(nextWaveText(), canvas.width - 12 * STATE.sf, splitLine - 30 * STATE.sf);
     }
     const clock = waveClockFraction();
@@ -434,7 +452,9 @@ function drawShipHUD(time) {
     ctx.restore();
     for (let char in STATE.activeKeys) {
         let k = STATE.activeKeys[char];
-        if(k.isAbducted || arcadeOn()) continue; 
+        if (arcadeOn()) continue;
+        if (k.isAbducted) { drawGhostKey(ctx, k, char, time, guide.has(char), STATE.hostages.active); continue; }   // a stolen key stays on the keyboard, gray and locked
+        const locked = !keyOpen(char); if (locked) { ctx.save(); ctx.globalAlpha = 0.22; }   // Beginner: keys that are not open yet
 
         let isBeingTargeted = false;
         for(let i=0; i<enemies.length; i++) { if(!enemies[i].isBoss && enemies[i].char === char && enemies[i].state === 'dive') { isBeingTargeted = true; break; } }
@@ -466,6 +486,11 @@ function drawShipHUD(time) {
         } else if (STATE.focusKeys && STATE.focusKeys.has(char)) {
             ctx.fillStyle = '#ffea00'; ctx.beginPath(); ctx.arc(k.x + k.w/2 - 7 * STATE.sf, k.y - k.h/2 + 7 * STATE.sf, 3.5 * STATE.sf, 0, 6.283); ctx.fill();
         }
+        if (STATE.newKeys && STATE.newKeys[char] > performance.now() && !guide.has(char)) {   // just unlocked: pulse green
+            ctx.save(); ctx.strokeStyle = '#00ff66'; ctx.shadowColor = '#00ff66'; ctx.shadowBlur = 16 * STATE.sf; ctx.lineWidth = 2.5 * STATE.sf; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time / 200);
+            ctx.beginPath(); ctx.roundRect(k.x - k.w/2 + 1, k.y - k.h/2 + 1, k.w - 2, k.h - 2, 6 * STATE.sf); ctx.stroke(); ctx.restore();
+        }
+        if (locked) ctx.restore();
     }
     
     let now = performance.now();
@@ -628,12 +653,13 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let len = minLen + Math.floor(wordRand() * (maxLen - minLen + 1));
     let bucket = [];
     for (let d = 0; d < 6 && bucket.length === 0; d++) bucket = DICT_BUCKETS[len - d] || DICT_BUCKETS[len + d] || [];
-    const typable = w => [...w].every(ch => STATE.activeKeys[ch]);
+    const typable = w => [...w].every(ch => STATE.activeKeys[ch] && keyOpen(ch));
     const free = w => typable(w) && !STATE.stolenKeys.some(mk => w.includes(mk));
-    const lim = rankLimit(), plain = STATE.difficulty === 'academy' ? (w => !/[qxzj]/.test(w)) : (() => true);
+    const lim = rankLimit(), plain = (STATE.difficulty === 'academy' || STATE.difficulty === 'beginner') ? (w => !/[qxzj]/.test(w)) : (() => true);
     let pool = bucket.filter(w => free(w) && WORD_RANK[w] < lim && plain(w));
     if (pool.length < 8) pool = bucket.filter(free);
     if (pool.length === 0) pool = DATA.DICTIONARY.filter(typable);
+    if (isBeginner() && pool.length < 6) pool = pool.concat(drillWords(minLen, maxLen, 8));   // the first stage has few real words
     if (pool.length === 0) return "the";
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
@@ -892,7 +918,7 @@ function gameLoop(time) {
 
     const cleared = enemies.every(e => e.state === 'ufo');
     const timedOut = !cleared && waveClockApplies() && performance.now() - (STATE.waveStartAt || 0) > waveAllowedMs() && aliveWordCount() < curveOf(CURVE.maxWords);
-    if (!frozen && (cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
+    if (!frozen && !STATE.coach && (cleared || timedOut) && !STATE.bossRef && !STATE.isSpawning && !STATE.hostages.active) {
         if (cleared) STATE.currentTarget = null; else { createPopText('KEEP UP! LEFTOVERS WILL DIVE', canvas.width/2, canvas.height/2 - 120 * STATE.sf, '#ff0055'); enemies.forEach(e => { if (!e.isBoss && (e.state === 'hover' || e.state === 'enter')) e.diveFuse = performance.now() + 1500; }); }
         
         if (cleared && STATE.challenge) {   // challenge stage tally
@@ -905,6 +931,7 @@ function gameLoop(time) {
             STATE.score += bonus; STATE.hull = Math.min(100, STATE.hull + curveOf(CURVE.healPerfect)); AudioFX.perfect();
             createPopText(`PERFECT WAVE! +${bonus}`, canvas.width/2, canvas.height/2 - 50, '#00f3ff');
         }
+        if (cleared) beginnerWaveDone();
         STATE.waveTotal = 0; STATE.waveCorrect = 0;
         STATE.isSpawning = true; 
         
@@ -961,6 +988,7 @@ function gameLoop(time) {
         drawStageHud(ctx);
     }
     if (!STATE.isHyperspace) { arcadeUpdate(dt); drawArcade(ctx); }
+    if (!frozen) { coachUpdate(dt); drawCoach(ctx); }
     
     ctx.globalAlpha = 1.0; const pBatches = {};
     for(let i=particles.length-1; i>=0; i--) {
@@ -1011,6 +1039,8 @@ function startGame() {
     
     STATE.hostages = { active: false, keys: [], biogram: '', singleChar: '', progress: 0, required: 5, practiceWords: [] };
     if (UI.hostageCave) UI.hostageCave.style.display = 'none';
+    STATE.coach = null; STATE.newKeys = {}; STATE.unlocked = null; STATE.keyStage = 0;
+    if (isBeginner()) applyKeyStage(Math.min(3, Math.max(1, prefs().beginnerStage || 1)));   // Beginner: the keys open up in stages
 
     fallingStar = null;
     
@@ -1026,7 +1056,7 @@ function startGame() {
     for(let i=0; i<150; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, speed: 0.2 + Math.random()*2, color: Math.random() > 0.9 ? '#bc13fe' : (Math.random() > 0.7 ? '#00f3ff' : '#666666')});
     
     createPopText("SECTOR 1 // SYSTEM ONLINE", canvas.width/2, canvas.height/2, '#00f3ff');
-    spawnWave();
+    if (isBeginner() && !prefs().trainingDone) startCoach(); else spawnWave();   // the first Beginner run opens with the flight training
     STATE.lastFrame = performance.now(); requestAnimationFrame(gameLoop);
 }
 
@@ -1035,6 +1065,7 @@ let lastKeyPress = 0;
 document.addEventListener('keydown', (e) => {
     if (perkKey(e)) return;
     if (arcadeKey(e, true)) return;
+    if (coachKey(e)) return;
     if(!STATE.active || STATE.paused || e.repeat || STATE.isHyperspace) return; 
     
     let now = performance.now();
@@ -1053,6 +1084,7 @@ document.addEventListener('keydown', (e) => {
         if(keyData && keyData.isAbducted) AudioFX.error(); 
         return; 
     }
+    if (!keyOpen(inputChar)) return;   // Beginner: a key that is not open yet does nothing, and costs nothing
 
     STATE.totalKeystrokes++;
     STATE.waveTotal++;
@@ -1138,11 +1170,12 @@ document.addEventListener('keydown', (e) => {
         if(lastKeyPress > 0 && (now - lastKeyPress) < 2000) { STATE.bioTracker[inputChar].latencies.push(now - lastKeyPress); if(STATE.bioTracker[inputChar].latencies.length > 20) STATE.bioTracker[inputChar].latencies.shift(); }
     
     } else {
-        pushAcc(0); if (STATE.currentTarget) { STATE.currentTarget.dirty = true; splitSnake(STATE.currentTarget.wordId); } if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active) STATE.hull = Math.max(1, STATE.hull - 1);
+        pushAcc(0); if (STATE.currentTarget) { STATE.currentTarget.dirty = true; splitSnake(STATE.currentTarget.wordId); } if (!STATE.bossRef && !STATE.challenge && !STATE.hostages.active && !isBeginner()) STATE.hull = Math.max(1, STATE.hull - 1);
+        coachOnWrong();
         STATE.recentErrors.push(now);
         STATE.recentErrors = STATE.recentErrors.filter(t => now - t < 100);
         
-        if (STATE.recentErrors.length >= 3) {
+        if (STATE.recentErrors.length >= (isBeginner() ? 99 : 3)) {
             STATE.weaponJamTimer = now + 500; 
             STATE.recentErrors = [];
             createPopText("WEAPON JAMMED!", canvas.width/2, canvas.height/2 + (50*STATE.sf), '#ff0055');
@@ -1233,7 +1266,7 @@ function setKbSize(v) { if (!HUD_FRACS[v]) return; STATE.kbSize = v; try { local
 })();
 
 // ================= start screen: title, hall of fame, setup, how to play =================
-const DIV_NAMES = { academy: 'ACADEMY', contender: 'CONTENDER', apex: 'APEX' };
+const DIV_NAMES = { beginner: 'BEGINNER', academy: 'ACADEMY', contender: 'CONTENDER', apex: 'APEX' };
 const HW_NAMES = { go60: 'Go60', glove80: 'Glove80', corne: 'Corne', voyager: 'Voyager', ansi60: 'ANSI 60%' };
 const LAYOUT_NAMES = { qwerty: 'QWERTY', colemak_dh: 'Colemak-DH', dvorak: 'Dvorak', custom: 'Custom layout' };
 // The first letter still standing of every word. A word whose first letters already fell can still be started from there.
@@ -1273,6 +1306,8 @@ function refreshChip() {
     const c = byId('setup-chip'); if (!c) return;
     c.textContent = (HW_NAMES[UI.hwSelect.value] || UI.hwSelect.value) + '  \u00B7  ' + (LAYOUT_NAMES[UI.layoutSelect.value] || UI.layoutSelect.value) + '  \u00B7  ' + (DIV_NAMES[UI.diffSelect.value] || '') + '   [ CHANGE ]';
 }
+// the how-to screen can replay the beginner flight training: it picks Beginner and starts a run
+function replayTraining() { savePrefs({ trainingDone: false, seenHowTo: true }); setDivision('beginner'); showScreen('title'); insertCoin(); }
 function finishHowTo() { savePrefs({ seenHowTo: true }); showScreen('title'); }
 function renderProgress() {
     const el = byId('progress-panel'); if (!el) return;
@@ -1327,8 +1362,8 @@ document.addEventListener('keydown', (e) => {
     if (s !== 'title') return;
     if (e.key === 'Enter') { if (tag === 'BUTTON' && e.target.id !== 'btn-start') return; e.preventDefault(); insertCoin(); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const order = ['academy', 'contender', 'apex']; let i = order.indexOf(UI.diffSelect.value);
-        setDivision(order[(i + (e.key === 'ArrowRight' ? 1 : 2)) % 3]); e.preventDefault();
+        const order = ['beginner', 'academy', 'contender', 'apex']; let i = order.indexOf(UI.diffSelect.value);
+        setDivision(order[(i + (e.key === 'ArrowRight' ? 1 : 3)) % 4]); e.preventDefault();
     }
     else if (e.key === 'h' || e.key === 'H') showScreen('hall');
     else if (e.key === 's' || e.key === 'S') showScreen('setup');

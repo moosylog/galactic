@@ -438,11 +438,12 @@ class SwarmEnemy {
             if (p >= 1) this.state = STATE.challenge ? 'fly' : 'hover';
         }
         else if (this.state === 'hover') {
-            this.formY += 0.2 * STATE.sf * (dt/16) * (STATE.speedMod || 1);
+            const still = !!(STATE.coach && STATE.coach.freeze);   // in flight training the letters wait for you
+            if (!still) this.formY += 0.2 * STATE.sf * (dt/16) * (STATE.speedMod || 1);
             this.x = this.formX + Math.sin(time/900 + (this.slot || 0)) * (8 * STATE.sf);
             this.y = this.formY + Math.cos(time/400 + this.index) * (10 * STATE.sf);
             
-            this.hoverT = (this.hoverT || 0) + dt;
+            if (still) { this.hoverT = 0; this.diveFuse = 0; } else this.hoverT = (this.hoverT || 0) + dt;
             if (this.diveFuse && time > this.diveFuse) { this.state = 'dive'; enemies.forEach(e => { if (e.wordId === this.wordId && (e.state === 'hover' || e.state === 'enter')) e.state = 'dive'; }); }
             let diveChance = 0.0005 + (STATE.wave * curveOf(CURVE.diveGrowth));
             if (enemies.length <= 8) diveChance += diff.rush;
@@ -674,7 +675,7 @@ function startSnake(letters, k) {
 }
 function addMushroom(x, y) { if (STATE.mushrooms.length < 15) STATE.mushrooms.push({ x, y }); }
 function updateSnakes(dt) {
-    const g = snakeGeom(), sp = SNAKE_SPACING * g.sf, base = ({ academy: 130, contender: 170, apex: 230 })[STATE.difficulty || 'contender'] * g.sf;
+    const g = snakeGeom(), sp = SNAKE_SPACING * g.sf, base = ({ beginner: 100, academy: 130, contender: 170, apex: 230 })[STATE.difficulty || 'contender'] * g.sf;
     for (let i = snakes.length - 1; i >= 0; i--) {
         const s = snakes[i], alive = s.alive();
         s.letters.forEach(l => { if (!l.active && !l.crossed && !l.mush) { l.mush = true; addMushroom(l.x, l.y); } });
