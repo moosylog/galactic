@@ -1,7 +1,28 @@
 /* © 2026 Moosy Research. All rights reserved. */
 "use strict";
 
-const CURRENT_VERSION = "1.5.0"; 
+const CURRENT_VERSION = "1.5.0";   // the SAVE FORMAT version: changing it wipes every player's saved records, bigram stats and custom layouts. Do not bump it for a normal release.
+const BUILD_VERSION = "1.6.1";     // the RELEASE: bump it with every release (see "Releasing" in the README). tests/version.test.js checks index.html against it.
+
+// ---- cache guard ----
+// A browser can keep an old index.html while it fetches fresh scripts. index.html announces its own build (window.GK_BUILD) and every script and
+// stylesheet URL carries ?v=BUILD_VERSION, so a fresh index.html never mixes with stale files. This guard covers the other way round: a stale
+// index.html (no or old GK_BUILD) next to fresh scripts. It reloads once onto an uncached URL, and never loops.
+(function cacheGuard() {
+    try {
+        if (typeof window === 'undefined' || !window.location || typeof window.location.replace !== 'function') return;   // not a real page (the tests)
+        if (window.GK_BUILD === BUILD_VERSION) {
+            const u = new URL(window.location.href);
+            if (u.searchParams.has('r') && window.history && window.history.replaceState) { u.searchParams.delete('r'); window.history.replaceState(null, '', u.pathname + u.search + u.hash); }
+            return;
+        }
+        if (window.sessionStorage.getItem('gk_reloaded') === BUILD_VERSION) return;   // already tried once this session
+        window.sessionStorage.setItem('gk_reloaded', BUILD_VERSION);
+        if (document.body) { const m = document.createElement('div'); m.textContent = 'Game updated. Reloading...'; m.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#03040c;color:#00f3ff;font:700 20px monospace;z-index:99999'; document.body.appendChild(m); }
+        const u = new URL(window.location.href); u.searchParams.set('r', String(Date.now())); window.location.replace(u.toString());
+    } catch (e) { /* never block the game because of the guard */ }
+})();
+// ---- end cache guard ----
 
 const DATA = {
     DIFFICULTY: {

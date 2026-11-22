@@ -687,9 +687,9 @@ function drawBomb(ctx, b, sf) {
 
 function drawArcadeAsk(ctx, A, W, H, sf) {
     const ready = A.askAge >= ARC.ASK_GRACE, t = Date.now();
-    ctx.save(); ctx.fillStyle = 'rgba(2,0,12,0.66)'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.fillStyle = 'rgba(2,0,12,0.8)'; ctx.fillRect(0, 0, W, H);
     const pw = 620 * sf, ph = 346 * sf, px = W / 2 - pw / 2, py = H / 2 - ph / 2 - 20 * sf;
-    ctx.fillStyle = 'rgba(14,6,34,0.95)'; ctx.strokeStyle = '#bc13fe'; ctx.lineWidth = 2.5 * sf; ctx.shadowBlur = 26 * sf; ctx.shadowColor = '#bc13fe';
+    ctx.fillStyle = '#0e0622'; ctx.strokeStyle = '#bc13fe'; ctx.lineWidth = 2.5 * sf; ctx.shadowBlur = 26 * sf; ctx.shadowColor = '#bc13fe';
     ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 14 * sf); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = '#bc13fe'; ctx.font = `800 ${Math.floor(16 * sf)}px 'Oxanium'`; ctx.fillText('ARCADE DRONE SHOT DOWN', W / 2, py + 34 * sf);
@@ -747,10 +747,14 @@ function drawArcadeHud(ctx, A, W, sf) {
     ctx.restore();
 }
 
+// the Y or N question: called at the very end of the frame, after the keyboard, the word display and the pop texts, so it always sits on top and stays readable
+function drawArcadeOverlay(ctx) {
+    const A = STATE.arcade; if (A && A.asking) drawArcadeAsk(ctx, A, canvas.width, canvas.height, STATE.sf);
+}
+
 function drawArcade(ctx) {
     const A = STATE.arcade, W = canvas.width, H = canvas.height, sf = STATE.sf, t = Date.now();
-    if (A.asking) { drawArcadeAsk(ctx, A, W, H, sf); return; }
-    if (!A.on) return;
+    if (A.asking || !A.on) return;   // the question is drawn last of all, by drawArcadeOverlay, so nothing can land on top of it
     ctx.save();
     if (A.level === 2 && A.phase === 'play') { const G = crawlerGeom(); for (const m of A.shrooms) drawShroom(ctx, m, G, sf); }
     const boss = A.level === 4 ? A.foes.find(e => e.type === 'boss' && e.hp > 0) : null;

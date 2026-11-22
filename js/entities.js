@@ -518,7 +518,7 @@ class SwarmEnemy {
 class BonusDrone {
     constructor(isRescue = false, kind = 'emp') {
         this.isRescue = isRescue; this.kind = kind; this.color = isRescue ? '#ffea00' : (kind === 'arcade' ? '#bc13fe' : '#00ff66'); this.rgb = isRescue ? '255,234,0' : (kind === 'arcade' ? '188,19,254' : '0,255,102');
-        let keys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted);
+        let keys = Object.keys(STATE.activeKeys).filter(k => /[a-z]/.test(k) && !STATE.activeKeys[k].isAbducted && keyOpen(k));
         this.char = keys.length > 0 ? keys[Math.floor(Math.random() * keys.length)] : 'a';
         this.y = (100 + Math.random() * 200) * STATE.sf;
         this.dir = Math.random() > 0.5 ? 1 : -1; 

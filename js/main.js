@@ -748,7 +748,7 @@ function spawnWave() {
 }
 
 function spawnUfo() {
-    const pool = (DICT_BUCKETS[3] || []).filter(w => WORD_RANK[w] < 3000 && [...w].every(ch => STATE.activeKeys[ch]) && !(STATE.waveFirsts && STATE.waveFirsts.has(w[0])));
+    const pool = (DICT_BUCKETS[3] || []).filter(w => WORD_RANK[w] < 3000 && [...w].every(ch => STATE.activeKeys[ch] && keyOpen(ch)) && !(STATE.waveFirsts && STATE.waveFirsts.has(w[0])));
     if (!pool.length) return;
     const word = pool[Math.floor(wordRand() * pool.length)], id = 'U' + Date.now(), right = wordRand() < 0.5, sp = 60 * STATE.sf;
     const base = right ? -60 * STATE.sf - word.length * sp : canvas.width + 60 * STATE.sf;
@@ -1012,6 +1012,7 @@ function gameLoop(time) {
     ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
 
     drawShipHUD(time);
+    drawArcadeOverlay(ctx);   // last of all: the arcade question must never have text drawn over it
     requestAnimationFrame(gameLoop);
 }
 

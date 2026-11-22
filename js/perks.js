@@ -6,7 +6,7 @@ const PerkSettings = { on: true };   // Setup, Display: turn the perk picks off
 
 function freshPerks() { return { counts: {}, list: [], diveMul: 1, empMul: 1, clockMul: 1, steady: false, aegis: false }; }
 
-function dualCandidates() { return Object.keys(STATE.activeKeys).filter(k => /^[a-z]$/.test(k) && !STATE.activeKeys[k].isDual && !STATE.activeKeys[k].isAbducted); }
+function dualCandidates() { return Object.keys(STATE.activeKeys).filter(k => /^[a-z]$/.test(k) && !STATE.activeKeys[k].isDual && !STATE.activeKeys[k].isAbducted && keyOpen(k)); }
 
 const PERKS = [
     { id: 'repair', name: 'REPAIR',       max: 99, desc: 'Restore 30% health now.', ok: () => STATE.hull < 100,

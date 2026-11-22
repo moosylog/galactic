@@ -54,6 +54,10 @@ function coachKey(e) {
         return true;
     }
     if (e.key === 'Enter') return true;   // no EMP in training
+    if (c.step === 3 && /^[a-z]$/i.test(e.key)) {   // the mistake step: any letter other than the next one of the word counts, even while the word is still flying in
+        const next = enemies.filter(en => en.active && !en.targeted).sort((a, b) => a.index - b.index)[0];
+        if (!next || next.char !== e.key.toLowerCase()) c.wrong = true;
+    }
     return false;
 }
 
