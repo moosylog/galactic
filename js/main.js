@@ -649,7 +649,7 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let diff = DATA.DIFFICULTY[STATE.difficulty];
     let boost = STATE.difficulty === 'apex' ? Math.min(2, Math.floor(((STATE.wave || 1) - 1) / 8)) : 0;
     let minLen = Math.min(8, diff.minLen + boost), maxLen = Math.min(8, diff.maxLen + boost);
-    if (isBoss) { minLen = Math.min(8, minLen + 2); maxLen = Math.min(8, maxLen + 2); }
+    if (isBoss && !isBeginner()) { minLen = Math.min(8, minLen + 2); maxLen = Math.min(8, maxLen + 2); }   // a boss word is 2 letters longer, except on Beginner: simple 3 to 4 letter words only
     let len = minLen + Math.floor(wordRand() * (maxLen - minLen + 1));
     let bucket = [];
     for (let d = 0; d < 6 && bucket.length === 0; d++) bucket = DICT_BUCKETS[len - d] || DICT_BUCKETS[len + d] || [];

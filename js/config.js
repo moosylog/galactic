@@ -2,7 +2,7 @@
 "use strict";
 
 const CURRENT_VERSION = "1.5.0";   // the SAVE FORMAT version: changing it wipes every player's saved records, bigram stats and custom layouts. Do not bump it for a normal release.
-const BUILD_VERSION = "1.6.1";     // the RELEASE: bump it with every release (see "Releasing" in the README). tests/version.test.js checks index.html against it.
+const BUILD_VERSION = "1.6.2";     // the RELEASE: bump it with every release (see "Releasing" in the README). tests/version.test.js checks index.html against it.
 
 // ---- cache guard ----
 // A browser can keep an old index.html while it fetches fresh scripts. index.html announces its own build (window.GK_BUILD) and every script and
@@ -107,7 +107,8 @@ if (!cachedDict) {
 }
 
 function getPracticeWords(bigram, single, count = 5) {
-    const typable = w => w.length <= 8 && [...w].every(ch => STATE.activeKeys[ch] && keyOpen(ch));
+    const maxL = isBeginner() ? 4 : 8, minL = isBeginner() ? 3 : 0;   // Beginner: simple 3 to 4 letter words only
+    const typable = w => w.length <= maxL && w.length >= minL && [...w].every(ch => STATE.activeKeys[ch] && keyOpen(ch));
     const lim = rankLimit() * 2, easy = w => WORD_RANK[w] === undefined || WORD_RANK[w] < lim;
     const occ = w => w.split(bigram).length - 1;
     const shuffle = a => a.sort(() => Math.random() - 0.5);
@@ -119,6 +120,7 @@ function getPracticeWords(bigram, single, count = 5) {
     };
     add(w => easy(w) && w.includes(bigram)); add(w => w.includes(bigram));
     add(w => easy(w) && w.includes(single)); add(w => w.includes(single));
+    if (isBeginner() && res.length < count) res = res.concat(drillWithPair(bigram, single, count - res.length).filter(w => !res.includes(w)));   // too few short real words: make drill words around the keys
     return res;
 }
 
@@ -426,6 +428,22 @@ function drillWords(minLen, maxLen, n) {
         const len = minLen + Math.floor(Math.random() * (maxLen - minLen + 1)); let w = '';
         for (let i = 0; i < len; i++) { let c; do { c = open[Math.floor(Math.random() * open.length)]; } while (w.length && c === w[w.length - 1] && open.length > 2); w += c; }
         if (!out.includes(w)) out.push(w);
+    }
+    return out;
+}
+// short drill words (3 to 4 letters) built around a pair or a single key, from the open letters: used when a Beginner has too few real words to practice with
+function drillWithPair(bigram, single, n) {
+    const open = Object.keys(STATE.activeKeys).filter(c => /^[a-z]$/.test(c) && keyOpen(c)), out = [];
+    const ok = s => s && [...s].every(ch => STATE.activeKeys[ch] && keyOpen(ch));
+    const core = ok(bigram) ? bigram : (ok(single) ? single : '');
+    if (open.length < 2) return out;
+    const rnd = () => open[Math.floor(Math.random() * open.length)];
+    for (let tries = 0; tries < 300 && out.length < n; tries++) {
+        const len = 3 + Math.floor(Math.random() * 2); let w;
+        if (core.length >= 2) { const pre = Math.random() < 0.5 ? 0 : 1, post = len - 2 - pre; w = (pre ? rnd() : '') + core + [...Array(Math.max(0, post))].map(rnd).join(''); }
+        else if (core.length === 1) { const at = Math.floor(Math.random() * len); w = [...Array(len)].map((_, i) => i === at ? core : rnd()).join(''); }
+        else w = [...Array(len)].map(rnd).join('');
+        if (w.length >= 3 && w.length <= 4 && !out.includes(w)) out.push(w);
     }
     return out;
 }

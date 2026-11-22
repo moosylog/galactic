@@ -93,7 +93,15 @@ function arcadeCollected() {
 function answerArcade(yes) {
     const A = STATE.arcade; if (!A.asking) return;
     A.asking = false;
-    if (yes) startArcade(); else createPopText('ARCADE SKIPPED', canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#bc13fe');
+    if (yes) startArcade();
+    else { createPopText('ARCADE SKIPPED', canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#bc13fe'); arcadeReleaseSpawn(); }   // back to typing: any wave that came due meanwhile starts now
+}
+
+// A wave can come due while arcade has the screen (the wave timer fires during the question or the flight): spawnWave holds it back, and this releases it.
+// It must run whenever the typing game gets the screen back, both after "N" and after a finished flight, or the game sits there with no enemies.
+function arcadeReleaseSpawn() {
+    const A = STATE.arcade;
+    if (A.pendingSpawn) { A.pendingSpawn = false; spawnWave(); }
 }
 
 function startArcade() {
@@ -113,7 +121,7 @@ function endArcade(why) {
     A.on = false; A.phase = 'off'; A.keys = {}; A.shots = []; A.bombs = []; A.foes = []; A.shrooms = []; A.fireQueued = false;
     createPopText((why || 'ARCADE OVER') + (A.kills ? '  ' + A.kills + ' HIT' + (A.kills > 1 ? 'S' : '') + '  +' + A.earned : ''), canvas.width / 2, canvas.height / 2 - 60 * STATE.sf, '#00f3ff');
     updateUI();
-    if (A.pendingSpawn) { A.pendingSpawn = false; spawnWave(); }   // a wave that came due while we were away starts now
+    arcadeReleaseSpawn();   // a wave that came due while we were away starts now
 }
 
 // ---------- keyboard ----------
