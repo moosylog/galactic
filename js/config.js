@@ -2,7 +2,7 @@
 "use strict";
 
 const CURRENT_VERSION = "1.5.0";   // the SAVE FORMAT version: changing it wipes every player's saved records, bigram stats and custom layouts. Do not bump it for a normal release.
-const BUILD_VERSION = "1.6.2";     // the RELEASE: bump it with every release (see "Releasing" in the README). tests/version.test.js checks index.html against it.
+const BUILD_VERSION = "1.6.3";     // the RELEASE: bump it with every release (see "Releasing" in the README). tests/version.test.js checks index.html against it.
 
 // ---- cache guard ----
 // A browser can keep an old index.html while it fetches fresh scripts. index.html announces its own build (window.GK_BUILD) and every script and

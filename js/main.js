@@ -659,7 +659,10 @@ function getWordForWave(wave, isBoss = false, forceBigram = null) {
     let pool = bucket.filter(w => free(w) && WORD_RANK[w] < lim && plain(w));
     if (pool.length < 8) pool = bucket.filter(free);
     if (pool.length === 0) pool = DATA.DICTIONARY.filter(typable);
-    if (isBeginner() && pool.length < 6) pool = pool.concat(drillWords(minLen, maxLen, 8));   // the first stage has few real words
+    if (isBeginner()) {   // Beginner: simple words only, whichever fallback built the pool above (a big dictionary can otherwise leak 5 to 8 letter words in)
+        pool = pool.filter(w => w.length >= minLen && w.length <= maxLen);
+        if (pool.length < 6) pool = pool.concat(drillWords(minLen, maxLen, 8));   // the first stage has few real words
+    }
     if (pool.length === 0) return "the";
     if (forceBigram) {
         const f = pool.filter(w => !usedWords.has(w) && w.includes(forceBigram));
@@ -1509,3 +1512,6 @@ function onLayoutChange() {
 // Restore saved layout, records and typing statistics when the page opens.
 loadGameData();
 initMenu();
+
+// a small build label in the corner, so it is easy to see which version is really running (a cached old copy shows an older number)
+(function () { const bt = document.getElementById('buildTag'); if (bt) bt.textContent = 'build ' + BUILD_VERSION; })();
